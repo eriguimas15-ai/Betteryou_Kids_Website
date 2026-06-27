@@ -3,6 +3,57 @@ import { Button } from "@/components/ui/button";
 import { Baby, Users, GraduationCap, Clock, Star, ArrowRight } from "lucide-react";
 
 const Services = () => {
+  const colorStyles = {
+    pink: {
+      iconBackground: "hsl(var(--pink) / 0.1)",
+      icon: "hsl(var(--pink))",
+      age: "hsl(var(--pink))",
+      bullet: "hsl(var(--pink))",
+      button: "hsl(var(--pink))",
+      gradient: "linear-gradient(90deg, hsl(var(--pink)), hsl(var(--pink) / 0.8))"
+    },
+    secondary: {
+      iconBackground: "hsl(var(--secondary) / 0.1)",
+      icon: "hsl(var(--secondary))",
+      age: "hsl(var(--secondary))",
+      bullet: "hsl(var(--secondary))",
+      button: "hsl(var(--secondary))",
+      gradient: "linear-gradient(90deg, hsl(var(--secondary)), hsl(var(--secondary) / 0.8))"
+    },
+    green: {
+      iconBackground: "hsl(var(--green) / 0.1)",
+      icon: "hsl(var(--green))",
+      age: "hsl(var(--green))",
+      bullet: "hsl(var(--green))",
+      button: "hsl(var(--green))",
+      gradient: "linear-gradient(90deg, hsl(var(--green)), hsl(var(--green) / 0.8))"
+    },
+    accent: {
+      iconBackground: "hsl(var(--accent) / 0.1)",
+      icon: "hsl(var(--accent))",
+      age: "hsl(var(--accent))",
+      bullet: "hsl(var(--accent))",
+      button: "hsl(var(--accent))",
+      gradient: "linear-gradient(90deg, hsl(var(--accent)), hsl(var(--accent) / 0.8))"
+    },
+    purple: {
+      iconBackground: "hsl(var(--purple) / 0.1)",
+      icon: "hsl(var(--purple))",
+      age: "hsl(var(--purple))",
+      bullet: "hsl(var(--purple))",
+      button: "hsl(var(--purple))",
+      gradient: "linear-gradient(90deg, hsl(var(--purple)), hsl(var(--purple) / 0.8))"
+    },
+    red: {
+      iconBackground: "hsl(var(--red) / 0.1)",
+      icon: "hsl(var(--red))",
+      age: "hsl(var(--red))",
+      bullet: "hsl(var(--red))",
+      button: "hsl(var(--red))",
+      gradient: "linear-gradient(90deg, hsl(var(--red)), hsl(var(--red) / 0.8))"
+    }
+  } as const;
+
   const services = [
     {
       icon: Baby,
@@ -50,9 +101,25 @@ const Services = () => {
       gradient: "from-green to-green/80"
     },
     {
+      icon: GraduationCap,
+      title: "1º Ciclo",
+      ageRange: "6-10 anos",
+      description: "Acompanhamento escolar dedicado ao ensino básico, equilibrando estudo, brincadeira e desenvolvimento pessoal.",
+      features: [
+        "Apoio ao estudo e trabalhos de casa",
+        "Reforço escolar nas disciplinas principais",
+        "Atividades lúdicas e desportivas",
+        "Estímulo à leitura e criatividade",
+        "Promoção da autonomia e responsabilidade",
+        "Horário flexível, adaptado às necessidades das famílias"
+      ],
+      color: "accent",
+      gradient: "from-accent to-accent/80"
+    },
+    {
       icon: Clock,
       title: "ATL",
-      ageRange: "6-8 anos",
+      ageRange: "3-10 anos",
       description: "Atividades de tempos livres que complementam o ensino regular com diversão e aprendizado.",
       features: [
         "Apoio aos trabalhos de casa",
@@ -61,8 +128,8 @@ const Services = () => {
         "Convívio social",
         "Flexibilidade de horários"
       ],
-      color: "accent",
-      gradient: "from-accent to-accent/80"
+      color: "purple",
+      gradient: "from-purple to-purple/80"
     }
   ];
 
@@ -105,48 +172,56 @@ const Services = () => {
 
         {/* Main Services Grid */}
         <div className="grid lg:grid-cols-2 gap-8 mb-16">
-          {services.map((service, index) => (
-            <Card key={index} className="shadow-soft hover:shadow-colorful transition-all duration-300 group overflow-hidden">
-              <div className={`h-2 bg-gradient-to-r ${service.gradient}`}></div>
-              <CardHeader className="pb-4">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-4">
-                    <div className={`p-3 bg-${service.color}/10 rounded-full group-hover:scale-110 transition-transform duration-300`}>
-                      <service.icon className={`h-8 w-8 text-${service.color}`} />
+          {services.map((service, index) => {
+            const palette = colorStyles[service.color as keyof typeof colorStyles] || colorStyles.pink;
+
+            return (
+              <Card key={index} className="shadow-soft hover:shadow-colorful transition-all duration-300 group overflow-hidden">
+                <div className="h-2" style={{ backgroundImage: palette.gradient }}></div>
+                <CardHeader className="pb-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <div
+                        className="p-3 rounded-full group-hover:scale-110 transition-transform duration-300"
+                        style={{ backgroundColor: palette.iconBackground }}
+                      >
+                        <service.icon className="h-8 w-8" style={{ color: palette.icon }} />
+                      </div>
+                      <div>
+                        <CardTitle className="text-2xl text-primary">{service.title}</CardTitle>
+                        <p className="font-semibold" style={{ color: palette.age }}>{service.ageRange}</p>
+                      </div>
                     </div>
-                    <div>
-                      <CardTitle className="text-2xl text-primary">{service.title}</CardTitle>
-                      <p className={`text-${service.color} font-semibold`}>{service.ageRange}</p>
-                    </div>
+                    <Star className="h-6 w-6 text-accent animate-pulse-glow" />
                   </div>
-                  <Star className="h-6 w-6 text-accent animate-pulse-glow" />
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground mb-6 leading-relaxed">
-                  {service.description}
-                </p>
-                <div className="space-y-3">
-                  <h4 className="font-semibold text-primary">Principais Características:</h4>
-                  <ul className="space-y-2">
-                    {service.features.map((feature, featureIndex) => (
-                      <li key={featureIndex} className="flex items-center space-x-2">
-                        <div className={`w-2 h-2 bg-${service.color} rounded-full`}></div>
-                        <span className="text-sm text-muted-foreground">{feature}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-                <Button 
-                  className={`mt-6 w-full bg-${service.color} hover:bg-${service.color}/90 text-white`}
-                  onClick={() => window.location.href = `/servicos/${service.title.toLowerCase()}`}
-                >
-                  Saiba Mais
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground mb-6 leading-relaxed">
+                    {service.description}
+                  </p>
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-primary">Principais Características:</h4>
+                    <ul className="space-y-2">
+                      {service.features.map((feature, featureIndex) => (
+                        <li key={featureIndex} className="flex items-center space-x-2">
+                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: palette.bullet }}></div>
+                          <span className="text-sm text-muted-foreground">{feature}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  <Button 
+                    className="mt-6 w-full text-white hover:opacity-90"
+                    style={{ backgroundColor: palette.button }}
+                    onClick={() => window.location.href = '/contato'}
+                  >
+                    Saiba Mais
+                    <ArrowRight className="ml-2 h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
         {/* Additional Services */}

@@ -43,10 +43,13 @@ const Footer = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
               <Input 
+                type="email"
+                autoComplete="email"
+                aria-label="Email para newsletter"
                 placeholder="Seu melhor email"
                 className="bg-white/10 border-white/20 text-white placeholder:text-white/60"
               />
-              <Button className="bg-accent hover:bg-accent/90 text-primary font-semibold px-8">
+              <Button type="button" className="bg-accent hover:bg-accent/90 text-primary font-semibold px-8">
                 <Mail className="mr-2 h-4 w-4" />
                 Inscrever
               </Button>
@@ -84,6 +87,9 @@ const Footer = () => {
                   <a
                     key={index}
                     href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Visitar ${social.color}`}
                     className={`p-2 bg-white/10 hover:bg-${social.color}/20 rounded-full transition-colors duration-300`}
                   >
                     <social.icon className="h-5 w-5" />
@@ -155,6 +161,7 @@ const Footer = () => {
             </div>
 
             <Button 
+              type="button"
               className="mt-6 w-full bg-accent hover:bg-accent/90 text-primary font-semibold"
             >
               Agendar Visita
@@ -190,7 +197,9 @@ const Footer = () => {
 
       {/* Scroll to Top Button */}
       <Button
+        type="button"
         onClick={scrollToTop}
+        aria-label="Voltar ao topo da página"
         className="fixed bottom-8 right-8 z-50 p-3 rounded-full bg-primary hover:bg-primary/90 text-white shadow-colorful hover:shadow-lg transition-all duration-300 animate-bounce"
         size="icon"
       >

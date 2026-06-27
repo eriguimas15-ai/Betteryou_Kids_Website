@@ -48,6 +48,14 @@ export default {
 					DEFAULT: 'hsl(var(--blue))',
 					foreground: 'hsl(var(--blue-foreground))'
 				},
+				purple: {
+					DEFAULT: 'hsl(var(--purple))',
+					foreground: 'hsl(var(--purple-foreground))'
+				},
+				red: {
+					DEFAULT: 'hsl(var(--red))',
+					foreground: 'hsl(var(--red-foreground))'
+				},
 				destructive: {
 					DEFAULT: 'hsl(var(--destructive))',
 					foreground: 'hsl(var(--destructive-foreground))'

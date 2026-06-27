@@ -36,6 +36,12 @@ All colors MUST be HSL.
     --blue: 210 75% 60%; /* Blue from logo */
     --blue-foreground: 0 0% 100%;
 
+    --purple: 280 60% 55%; /* Purple accent */
+    --purple-foreground: 0 0% 100%;
+
+    --red: 0 70% 55%; /* Red accent */
+    --red-foreground: 0 0% 100%;
+
     --muted: 319 15% 95%; /* Light purple tint */
     --muted-foreground: 215.4 16.3% 46.9%;
 
