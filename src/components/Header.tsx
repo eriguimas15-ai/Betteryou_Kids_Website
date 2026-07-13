@@ -51,7 +51,7 @@ const Header = () => {
       <header className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
         isScrolled || !isHomePage
           ? 'bg-white/95 backdrop-blur-md shadow-soft pt-0' 
-          : 'bg-transparent pt-12'
+          : 'bg-transparent pt-4'
       }`}>
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center py-4">
@@ -60,7 +60,7 @@ const Header = () => {
               <img 
                 src={logo}
                 alt="Betteryou Kids Logo" 
-                className="h-16 w-auto"
+                className="h-24 w-auto"
               />
             </div>
 
