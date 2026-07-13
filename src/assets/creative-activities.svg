@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600">
+  <rect width="1200" height="600" fill="#fff7fb"/>
+
+  <!-- Paint palette -->
+  <g transform="translate(240,260)">
+    <ellipse cx="0" cy="0" rx="120" ry="80" fill="#ffd4e0"/>
+    <circle cx="-40" cy="-10" r="10" fill="#ff6b6b"/>
+    <circle cx="0" cy="-30" r="10" fill="#4f46e5"/>
+    <circle cx="40" cy="0" r="10" fill="#ffd60a"/>
+  </g>
+
+  <!-- Child (African) painting -->
+  <g transform="translate(520,320)">
+    <circle cx="0" cy="-40" r="42" fill="#5a352a"/>
+    <rect x="-46" y="0" width="92" height="120" rx="16" fill="#a6f0e0"/>
+    <rect x="-8" y="40" width="40" height="10" rx="4" fill="#3a2a22"/>
+  </g>
+
+  <!-- Child (drawing) -->
+  <g transform="translate(800,320)">
+    <circle cx="0" cy="-38" r="38" fill="#ffd9b3"/>
+    <rect x="-40" y="0" width="80" height="110" rx="14" fill="#ffd27a"/>
+  </g>
+
+  <text x="120" y="520" font-family="Verdana, Arial" font-size="20" fill="#6b3a5b">Atividades Criativas — Imaginação em Ação</text>
+</svg>

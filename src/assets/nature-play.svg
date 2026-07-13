@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 600">
+  <rect width="1200" height="600" fill="#f3fff2"/>
+
+  <!-- Tree -->
+  <g transform="translate(180,220)">
+    <rect x="-12" y="40" width="24" height="160" rx="8" fill="#7a4b2a"/>
+    <circle cx="0" cy="0" r="80" fill="#6fcf97"/>
+    <circle cx="60" cy="-20" r="60" fill="#57c884"/>
+  </g>
+
+  <!-- Child (African) playing -->
+  <g transform="translate(420,360)">
+    <circle cx="0" cy="-40" r="40" fill="#5a352a"/>
+    <rect x="-40" y="0" width="80" height="110" rx="14" fill="#ffd27a"/>
+    <path d="M -28 40 q 28 -20 56 0" stroke="#3a2a22" stroke-width="6" fill="none" stroke-linecap="round"/>
+  </g>
+
+  <!-- Child (plays) -->
+  <g transform="translate(640,360)">
+    <circle cx="0" cy="-40" r="38" fill="#ffd9b3"/>
+    <rect x="-38" y="0" width="76" height="110" rx="12" fill="#ffb3b3"/>
+  </g>
+
+  <!-- Grass -->
+  <rect x="0" y="480" width="1200" height="120" fill="#c9f7bf"/>
+
+  <text x="120" y="520" font-family="Georgia, serif" font-size="20" fill="#2f5a3f">Aprender na Natureza — Descobrir e Crescer</text>
+</svg>

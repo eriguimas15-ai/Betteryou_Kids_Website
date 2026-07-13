@@ -4,9 +4,9 @@ import { Link } from "react-router-dom";
 import { Heart, Leaf, Sparkles, ArrowRight, Users, Award, Star, BookOpen, Palette, Music } from "lucide-react";
 import Hero from "@/components/Hero";
 import DynamicStats from "@/components/DynamicStats";
-import heroImage from "@/assets/hero-classroom.jpg";
-import natureImage from "@/assets/nature-play.jpg";
-import creativeImage from "@/assets/creative-activities.jpg";
+import heroImage from "@/assets/hero-classroom.svg";
+import natureImage from "@/assets/nature-play.svg";
+import creativeImage from "@/assets/creative-activities.svg";
 
 const Home = () => {
   const features = [

@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Play, Image as ImageIcon, Calendar, Users, Maximize2 } from "lucide-react";
-import heroImage from "@/assets/hero-classroom.jpg";
-import natureImage from "@/assets/nature-play.jpg";
-import creativeImage from "@/assets/creative-activities.jpg";
+import heroImage from "@/assets/hero-classroom.svg";
+import natureImage from "@/assets/nature-play.svg";
+import creativeImage from "@/assets/creative-activities.svg";
 
 const Gallery = () => {
   const [selectedMedia, setSelectedMedia] = useState<any>(null);

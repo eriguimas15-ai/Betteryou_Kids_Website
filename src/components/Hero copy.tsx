@@ -2,9 +2,9 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import heroImage from "@/assets/hero-classroom.jpg";
-import natureImage from "@/assets/nature-play.jpg";
-import creativeImage from "@/assets/creative-activities.jpg";
+import heroImage from "@/assets/hero-classroom.svg";
+import natureImage from "@/assets/nature-play.svg";
+import creativeImage from "@/assets/creative-activities.svg";
 
 const Hero = () => {
   const [currentSlide, setCurrentSlide] = useState(0);

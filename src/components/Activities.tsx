@@ -2,8 +2,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Music, Dumbbell, Palette, Camera, TreePine, BookOpen, Utensils, Globe, Calendar, Clock, Users } from "lucide-react";
 import ActivityRegistration from "@/components/ActivityRegistration";
-import natureImage from "@/assets/nature-play.jpg";
-import creativeImage from "@/assets/creative-activities.jpg";
+import natureImage from "@/assets/nature-play.svg";
+import creativeImage from "@/assets/creative-activities.svg";
 
 const Activities = () => {
   const activities = [
