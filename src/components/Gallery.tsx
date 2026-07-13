@@ -4,9 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Play, Image as ImageIcon, Calendar, Users, Maximize2 } from "lucide-react";
-import heroImage from "@/assets/hero-classroom.svg";
-import natureImage from "@/assets/nature-play.svg";
-import creativeImage from "@/assets/creative-activities.svg";
+import heroImage from "@/assets/hero-classroom.jpg";
+import natureImage from "@/assets/nature-play.jpg";
+import creativeImage from "@/assets/creative-activities.jpg";
 
 const Gallery = () => {
   const [selectedMedia, setSelectedMedia] = useState<any>(null);
@@ -217,13 +217,6 @@ const Gallery = () => {
               >
                 <Users className="mr-2 h-5 w-5" />
                 Agendar Visita
-              </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                className="border-white text-white hover:bg-white hover:text-primary px-8"
-              >
-                Ver Mais Fotos
               </Button>
             </div>
           </div>

@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight, Heart, Star } from "lucide-react";
-import heroImage from "@/assets/hero-classroom.svg";
-import natureImage from "@/assets/nature-play.svg";
-import creativeImage from "@/assets/creative-activities.svg";
+import heroImage from "@/assets/hero-classroom.jpg";
+import natureImage from "@/assets/nature-play.jpg";
+import creativeImage from "@/assets/creative-activities.jpg";
 
 const ModernSlider = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
