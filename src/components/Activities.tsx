@@ -21,6 +21,8 @@ const Activities = () => {
       description: "Arte marcial que desenvolve disciplina, respeito, coordenação motora e autoconfiança.",
       category: "Desportiva",
       color: "blue"
+      ,
+      image: natureImage
     },
     {
       icon: Palette,
@@ -28,6 +30,8 @@ const Activities = () => {
       description: "Dança clássica que promove graciosidade, equilíbrio, postura e expressão artística.",
       category: "Artística",
       color: "pink"
+      ,
+      image: creativeImage
     },
     {
       icon: TreePine,
@@ -43,13 +47,16 @@ const Activities = () => {
       description: "Pintura, desenho, escultura e artesanato para estimular a criatividade e expressão.",
       category: "Artística",
       color: "accent"
+      ,
+      image: creativeImage
     },
     {
       icon: BookOpen,
-      title: "Contação de Histórias",
+      title: "A Magia das Histórias",
       description: "Desenvolvimento da linguagem, imaginação e amor pela leitura através de narrativas envolventes.",
       category: "Educativa",
-      color: "secondary"
+      color: "secondary",
+      image: creativeImage
     },
     {
       icon: Utensils,
@@ -57,6 +64,8 @@ const Activities = () => {
       description: "Introdução à culinária saudável, desenvolvendo coordenação motora e autonomia.",
       category: "Prática",
       color: "accent"
+      ,
+      image: creativeImage
     },
     {
       icon: Globe,
@@ -64,6 +73,8 @@ const Activities = () => {
       description: "Introdução lúdica ao inglês e outras línguas através de jogos e músicas.",
       category: "Educativa",
       color: "blue"
+      ,
+      image: creativeImage
     }
   ];
 

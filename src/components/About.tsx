@@ -111,6 +111,21 @@ const About = () => {
       icon: Globe,
       color: "pink"
     }
+    ,
+    {
+      year: "2025",
+      title: "Abertura do Novo Espaço",
+      description: "Inauguração do novo espaço da Betteryou Kids em 1 de Setembro de 2025, ampliando o atendimento e atividades.",
+      icon: MapPin,
+      color: "blue"
+    },
+    {
+      year: "2026",
+      title: "Abertura do 1º Ciclo",
+      description: "Início das atividades do 1º Ciclo a partir de 14 de Setembro de 2026, com projeto pedagógico expandido.",
+      icon: GraduationCap,
+      color: "secondary"
+    }
   ];
 
   const activities = [
