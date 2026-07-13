@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Link } from "react-router-dom";
 import { Heart, Leaf, Sparkles, ArrowRight, Users, Award, Star, BookOpen, Palette, Music } from "lucide-react";
 import Hero from "@/components/Hero";
 import DynamicStats from "@/components/DynamicStats";
@@ -53,6 +54,24 @@ const Home = () => {
       age: "5-6 anos",
       description: "Preparação para o ensino fundamental",
       image: creativeImage
+    },
+    {
+      title: "1º Ciclo",
+      age: "6-10 anos",
+      description: "Acompanhamento pedagógico para o 1º Ciclo, com reforço escolar e atividades de autonomia.",
+      image: heroImage
+    },
+    {
+      title: "ATL",
+      age: "3-10 anos",
+      description: "Atividades de tempos livres que complementam o ensino com diversão e apoio aos estudos.",
+      image: natureImage
+    },
+    {
+      title: "Festas e Eventos Infantis",
+      age: "3-10 anos",
+      description: "Transformamos cada celebração numa experiência única, com um espaço acolhedor, divertido e preparado para receber aniversários, batizados, festas temáticas e outros eventos infantis.",
+      image: heroImage
     }
   ];
 
@@ -145,11 +164,11 @@ const Home = () => {
                   <h3 className="text-xl font-semibold text-primary mb-3 group-hover:text-pink transition-colors duration-300">{service.title}</h3>
                   <p className="text-muted-foreground mb-4 leading-relaxed">{service.description}</p>
                   <Button 
+                    asChild
                     variant="outline" 
                     className="w-full group-hover:bg-primary group-hover:text-white transition-all duration-300"
-                    onClick={() => window.location.href = '/servicos'}
                   >
-                    Saiba Mais
+                    <Link to="/servicos">Saiba Mais</Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -158,12 +177,14 @@ const Home = () => {
 
           <div className="text-center mt-12">
             <Button 
+              asChild
               size="lg" 
               className="bg-primary hover:bg-primary/90 text-primary-foreground px-8"
-              onClick={() => window.location.href = '/sobre'}
             >
-              Conheça Nossa História
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <Link to="/sobre">
+                Conheça Nossa História
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
             </Button>
           </div>
         </div>
@@ -229,12 +250,14 @@ const Home = () => {
 
           <div className="text-center mt-12">
             <Button 
+              asChild
               size="lg" 
               className="bg-primary hover:bg-primary/90 text-primary-foreground px-8"
-              onClick={() => window.location.href = '/atividades'}
             >
-              Ver Todas as Atividades
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <Link to="/atividades">
+                Ver Todas as Atividades
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
             </Button>
           </div>
         </div>
@@ -297,13 +320,15 @@ const Home = () => {
 
           <div className="text-center mt-12">
             <Button 
+              asChild
               variant="outline" 
               size="lg" 
               className="px-8"
-              onClick={() => window.location.href = '/galeria'}
             >
-              Ver Galeria Completa
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <Link to="/galeria">
+                Ver Galeria Completa
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
             </Button>
           </div>
         </div>
@@ -344,12 +369,12 @@ const Home = () => {
 
           <div className="text-center mt-12">
             <Button 
+              asChild
               variant="outline" 
               size="lg" 
               className="px-8"
-              onClick={() => window.location.href = '/sobre'}
             >
-              Ver Mais Depoimentos
+              <Link to="/depoimentos">Ver Mais Depoimentos</Link>
             </Button>
           </div>
         </div>
@@ -364,22 +389,16 @@ const Home = () => {
           <p className="text-xl mb-8 max-w-2xl mx-auto text-white/90">
             Agende uma visita e descubra como podemos contribuir para o desenvolvimento do seu filho.
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex justify-center">
             <Button 
+              asChild
               size="lg" 
               className="bg-accent hover:bg-accent/90 text-primary font-semibold px-8 py-4 text-lg"
-              onClick={() => window.location.href = '/contato'}
             >
-              Agendar Visita
-              <ArrowRight className="ml-2 h-5 w-5" />
-            </Button>
-            <Button 
-              variant="outline" 
-              size="lg" 
-              className="border-white text-white hover:bg-white hover:text-primary px-8 py-4 text-lg"
-              onClick={() => window.location.href = '/sobre'}
-            >
-              Conhecer Mais
+              <Link to="/contato">
+                Agendar Visita
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
             </Button>
           </div>
         </div>

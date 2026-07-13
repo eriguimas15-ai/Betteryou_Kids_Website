@@ -39,7 +39,7 @@ const Contact = () => {
     e.preventDefault();
     toast({
       title: "Formulário Enviado!",
-      description: "Entraremos em contato em breve. Obrigado pelo interesse na Betteryou Kids!",
+      description: "Entraremos em contacto em breve. Obrigado pelo interesse na Betteryou Kids!",
     });
     // Reset form
     setFormData({
@@ -57,30 +57,30 @@ const Contact = () => {
   const contactInfo = [
     {
       icon: MapPin,
-      title: "Localização Principal",
-      info: "Rua Principal, Bairro Nobre, Luanda",
-      detail: "Próximo ao Centro Comercial",
+      title: "Localização",
+      info: "Av. Cmte. Gika 150, Luanda",
+      detail: "Espaço Sagrada Família",
       color: "primary"
     },
     {
       icon: Phone,
       title: "Telefone",
-      info: "+244 XXX XXX XXX",
-      detail: "Segunda a Sexta: 7h às 18h",
+      info: "+244 921 669 893",
+      detail: "Chamada e WhatsApp",
       color: "secondary"
     },
     {
       icon: Mail,
       title: "Email",
-      info: "info@betteryoukids.ao",
+      info: "geral@betteryoukids.com",
       detail: "Resposta em até 24h",
       color: "accent"
     },
     {
       icon: Clock,
       title: "Horário de Funcionamento",
-      info: "7h00 às 18h00",
-      detail: "Segunda a Sexta-feira",
+      info: "Segunda a Sexta: 7h às 18h",
+      detail: "Sábado: 8h às 12h (apenas visitas)",
       color: "green"
     }
   ];
@@ -88,15 +88,21 @@ const Contact = () => {
   const locations = [
     {
       name: "Unidade Principal",
-      address: "Rua Principal, Bairro Nobre, Luanda",
-      status: "Funcionando",
-      features: ["Todas as modalidades", "Atividades extracurriculares", "Refeitório", "Área externa"]
+      address: "Av. Cmte. Gika 150, Sagrada Família",
+      status: "Aberta",
+      mapLink: "https://maps.app.goo.gl/r5rAJXaTU8F2Xccj9",
+      description: "À direita da maternidade Lucrécia Paím",
+      contact: "+244 921 669 893",
+      email: "geral@betteryoukids.com"
     },
     {
-      name: "Unidade Talatona",
-      address: "Em breve na Talatona",
-      status: "Em Desenvolvimento",
-      features: ["Novas instalações", "Tecnologia avançada", "Espaços amplos", "Previsão: 2025"]
+      name: "Segunda Unidade",
+      address: "Rua Urbanização Harmonia, 540 A Patriota casa N, Luanda",
+      status: "Aberta",
+      mapLink: "https://maps.app.goo.gl/cukitSpAWHWFv5jR7?g_st=ac",
+      description: "Casa N, Patriota",
+      contact: "+244 942 043 710",
+      email: "patriota@betteryoukids.com"
     }
   ];
 
@@ -106,7 +112,7 @@ const Contact = () => {
         {/* Header */}
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold text-primary mb-6">
-            Entre em Contato
+            Entre em Contacto
           </h2>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Estamos prontos para receber sua família na Betteryou Kids. 
@@ -120,7 +126,7 @@ const Contact = () => {
             <CardHeader>
               <CardTitle className="text-2xl text-primary flex items-center">
                 <Send className="mr-2 h-6 w-6" />
-                Formulário de Contato
+                Formulário de Contacto
               </CardTitle>
             </CardHeader>
             <CardContent>

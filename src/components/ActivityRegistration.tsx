@@ -60,7 +60,7 @@ const ActivityRegistration = ({ activity }: ActivityRegistrationProps) => {
     // Here you would typically send the data to your backend
     toast({
       title: "Inscrição realizada!",
-      description: "Entraremos em contato em breve para confirmar a participação.",
+      description: "Entraremos em contacto em breve para confirmar a participação.",
     });
     setIsOpen(false);
     setFormData({

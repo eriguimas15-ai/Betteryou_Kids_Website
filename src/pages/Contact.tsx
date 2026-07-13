@@ -25,7 +25,7 @@ const Contact = () => {
     // Simulate form submission
     toast({
       title: "Solicitação enviada!",
-      description: "Entraremos em contato em breve para agendar sua visita.",
+      description: "Entraremos em contacto em breve para agendar sua visita.",
     });
     
     // Reset form
@@ -49,28 +49,28 @@ const Contact = () => {
 
   const contactInfo = [
     {
+      icon: Clock,
+      title: "Horário de Funcionamento",
+      info: "07h30 às 17h30",
+      extra: "Sábado, domingo e feriados: Encerrado"
+    },
+    {
       icon: MapPin,
-      title: "Endereço Principal",
-      info: "Rua das Flores, 123, Luanda Sul",
-      extra: "Segunda Unidade: Talatona (em breve)"
+      title: "Unidade Principal",
+      info: "Av. Cmte. Gika 150, Sagrada Família",
+      extra: "À direita da maternidade Lucrécia Paím"
     },
     {
       icon: Phone,
-      title: "Telefone",
-      info: "+244 XXX XXX XXX",
-      extra: "WhatsApp disponível"
+      title: "Contacto Geral",
+      info: "+244 921 669 893",
+      extra: "geral@betteryoukids.com"
     },
     {
-      icon: Mail,
-      title: "Email",
-      info: "info@betteryoukids.ao",
-      extra: "Resposta em até 24h"
-    },
-    {
-      icon: Clock,
-      title: "Horário de Funcionamento",
-      info: "Segunda a Sexta: 7h às 18h",
-      extra: "Sábado: 8h às 12h (apenas visitas)"
+      icon: MapPin,
+      title: "Segunda Unidade",
+      info: "Rua Urbanização Harmonia, 540 A Patriota casa N, Luanda",
+      extra: "Contacto: +244 942 043 710 | Email: patriota@betteryoukids.com"
     }
   ];
 
@@ -80,7 +80,7 @@ const Contact = () => {
       <section className="py-20 bg-gradient-hero text-white">
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6 animate-fade-in-up">
-            Entre em Contato
+            Entre em Contacto
           </h1>
           <p className="text-xl mb-8 max-w-2xl mx-auto text-white/90 animate-fade-in-up" style={{animationDelay: '0.2s'}}>
             Estamos aqui para responder suas perguntas e agendar uma visita especial para você conhecer nossa escola.
@@ -233,24 +233,49 @@ const Contact = () => {
                 <CardTitle className="text-primary text-2xl">Nossa Localização</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="aspect-video bg-gradient-to-br from-primary/10 to-secondary/10 rounded-lg flex items-center justify-center mb-6">
-                  <div className="text-center">
-                    <MapPin className="h-12 w-12 text-primary mx-auto mb-2" />
-                    <p className="text-muted-foreground">Mapa em breve</p>
+                <div className="grid gap-8">
+                  <div className="rounded-2xl overflow-hidden shadow-soft">
+                    <iframe
+                      title="Mapa Unidade Principal"
+                      src="https://www.google.com/maps?width=600&height=450&hl=pt&q=Av.%20Cmte.%20Gika%20150,%20Luanda&ie=UTF8&t=&z=17&iwloc=B&output=embed"
+                      className="w-full h-64"
+                      loading="lazy"
+                    />
+                    <div className="p-6 bg-background">
+                      <h4 className="font-semibold text-primary mb-2">Unidade Principal</h4>
+                      <p className="text-muted-foreground mb-1">Av. Cmte. Gika 150, Luanda</p>
+                      <p className="text-sm text-muted-foreground mb-3">À direita da maternidade Lucrécia Paím</p>
+                      <a
+                        href="https://maps.app.goo.gl/gPe2Mm9EDUtqfcVUA"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:text-accent transition-colors duration-200"
+                      >
+                        Abrir no Google Maps
+                      </a>
+                    </div>
                   </div>
-                </div>
-                
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="font-semibold text-primary mb-2">Unidade Principal</h4>
-                    <p className="text-muted-foreground">Rua das Flores, 123, Luanda Sul</p>
-                    <p className="text-sm text-muted-foreground">Próximo ao Shopping Belas</p>
-                  </div>
-                  
-                  <div className="border-t pt-4">
-                    <h4 className="font-semibold text-primary mb-2">Segunda Unidade (2025)</h4>
-                    <p className="text-muted-foreground">Talatona, Luanda</p>
-                    <p className="text-sm text-accent">Em construção</p>
+
+                  <div className="rounded-2xl overflow-hidden shadow-soft">
+                    <iframe
+                      title="Mapa Segunda Unidade"
+                      src="https://www.google.com/maps?width=600&height=450&hl=pt&q=Urbaniza%C3%A7%C3%A3o%20Harmonia,%20540%20A%20Patriota%20casa%20N,%20Luanda&ie=UTF8&t=&z=17&iwloc=B&output=embed"
+                      className="w-full h-64"
+                      loading="lazy"
+                    />
+                    <div className="p-6 bg-background">
+                      <h4 className="font-semibold text-primary mb-2">Segunda Unidade</h4>
+                      <p className="text-muted-foreground mb-1">Urbanização Harmonia, 540 A Patriota casa N, Luanda</p>
+                      <p className="text-sm text-muted-foreground mb-3">Contacto: +244 942 043 710 | Email: patriota@betteryoukids.com</p>
+                      <a
+                        href="https://maps.app.goo.gl/p2JSVXcqrAAmPTYSA"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:text-accent transition-colors duration-200"
+                      >
+                        Abrir no Google Maps
+                      </a>
+                    </div>
                   </div>
                 </div>
               </CardContent>

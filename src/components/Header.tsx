@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Menu, X, Phone, Mail, MapPin } from "lucide-react";
-import { useLocation } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import logo from '../assets/logoPNG.png'
 const Header = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -25,7 +25,8 @@ const Header = () => {
     { name: "Serviços", href: "/servicos" },
     { name: "Atividades", href: "/atividades" },
     { name: "Galeria", href: "/galeria" },
-    { name: "Contato", href: "/contato" },
+    { name: "Depoimentos", href: "/depoimentos" },
+    { name: "Contacto", href: "/contato" },
   ];
 
   return (
@@ -68,9 +69,9 @@ const Header = () => {
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
-                  <a
+                  <Link
                     key={item.name}
-                    href={item.href}
+                    to={item.href}
                     className={`${
                       isScrolled || !isHomePage ? 'text-foreground' : 'text-white'
                     } hover:text-primary transition-colors duration-200 font-medium relative ${
@@ -81,7 +82,7 @@ const Header = () => {
                     {isActive && (
                       <div className="absolute -bottom-1 left-0 w-full h-0.5 bg-primary rounded-full"></div>
                     )}
-                  </a>
+                  </Link>
                 );
               })}
             </nav>
@@ -89,10 +90,10 @@ const Header = () => {
             {/* CTA Button */}
             <div className="hidden lg:flex items-center space-x-4">
               <Button 
+                asChild
                 className="bg-gradient-warm text-white hover:shadow-colorful transition-all duration-300"
-                onClick={() => window.location.href = '/contato'}
               >
-                Agendar Visita
+                <Link to="/contato">Agendar Visita</Link>
               </Button>
             </div>
 
@@ -114,23 +115,23 @@ const Header = () => {
                 {navigation.map((item) => {
                   const isActive = location.pathname === item.href;
                   return (
-                    <a
+                    <Link
                       key={item.name}
-                      href={item.href}
+                      to={item.href}
                       onClick={() => setIsMenuOpen(false)}
                       className={`text-foreground hover:text-primary transition-colors duration-200 font-medium py-2 ${
                         isActive ? 'text-primary font-semibold' : ''
                       }`}
                     >
                       {item.name}
-                    </a>
+                    </Link>
                   );
                 })}
                 <Button 
+                  asChild
                   className="bg-gradient-warm text-white mt-4 w-full"
-                  onClick={() => window.location.href = '/contato'}
                 >
-                  Agendar Visita
+                  <Link to="/contato">Agendar Visita</Link>
                 </Button>
               </nav>
             </div>

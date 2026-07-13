@@ -1,7 +1,10 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { Heart, Mail, Phone, MapPin, Facebook, Instagram, Youtube, Linkedin, ChevronUp } from "lucide-react";
+import { Heart, Mail, Phone, MapPin, Facebook, Instagram, Linkedin, ChevronUp, School } from "lucide-react";
+
+const EMAIL_STORAGE_KEY = "betteryou_newsletter_emails";
 
 const Footer = () => {
   const scrollToTop = () => {
@@ -12,22 +15,70 @@ const Footer = () => {
     { name: "Serviços", href: "/servicos" },
     { name: "Atividades", href: "/atividades" },
     { name: "Galeria", href: "/galeria" },
-    { name: "Contato", href: "/contato" }
+    { name: "Depoimentos", href: "/depoimentos" },
+    { name: "Contacto", href: "/contato" }
   ];
 
   const services = [
     { name: "Creche (1-3 anos)", href: "/servicos" },
     { name: "Pré-Escolar (3-5 anos)", href: "/servicos" },
     { name: "Jardim de Infância (5-6 anos)", href: "/servicos" },
-    { name: "ATL (6-8 anos)", href: "/servicos" }
+    { name: "1º Ciclo (6-10 anos)", href: "/servicos" },
+    { name: "ATL", href: "/servicos" },
+    { name: "Festas e Eventos Infantis", href: "/servicos" }
   ];
 
+  const [email, setEmail] = useState("");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [savedCount, setSavedCount] = useState(0);
+
   const socialLinks = [
-    { icon: Facebook, href: "#", color: "blue" },
-    { icon: Instagram, href: "#", color: "pink" },
-    { icon: Youtube, href: "#", color: "accent" },
-    { icon: Linkedin, href: "#", color: "secondary" }
+    { icon: Facebook, href: "https://www.facebook.com/people/betteryoukids/100071268902405/", color: "blue" },
+    { icon: Instagram, href: "https://www.instagram.com/betteryou.kids/?utm_medium=copy_link", color: "pink" },
+    { icon: Linkedin, href: "https://www.linkedin.com/company/betteryoukids/", color: "secondary" }
   ];
+
+  useEffect(() => {
+    const stored = localStorage.getItem(EMAIL_STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as string[];
+        setSavedCount(Array.isArray(parsed) ? parsed.length : 0);
+      } catch {
+        setSavedCount(0);
+      }
+    }
+  }, []);
+
+  const validateEmail = (value: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  };
+
+  const handleSubscribe = () => {
+    const trimmed = email.trim().toLowerCase();
+    if (!validateEmail(trimmed)) {
+      setStatusMessage("Por favor, insira um email válido.");
+      return;
+    }
+
+    const stored = localStorage.getItem(EMAIL_STORAGE_KEY);
+    const list = stored ? JSON.parse(stored) as string[] : [];
+    if (list.includes(trimmed)) {
+      setStatusMessage("Esse email já está registrado para novidades.");
+      return;
+    }
+
+    const updated = [...list, trimmed];
+    localStorage.setItem(EMAIL_STORAGE_KEY, JSON.stringify(updated));
+    setSavedCount(updated.length);
+    setEmail("");
+    setStatusMessage("Email registrado! Você receberá novidades assim que houver atualizações.");
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    handleSubscribe();
+  };
 
   return (
     <footer className="bg-primary text-primary-foreground">
@@ -39,21 +90,26 @@ const Footer = () => {
               Mantenha-se Atualizado
             </h3>
             <p className="text-primary-foreground/80 mb-8">
-              Receba novidades, dicas educativas e informações sobre eventos da Betteryou Kids
+              Receba novidades, dicas educativas e informações sobre serviços, atividades e eventos da Betteryou Kids
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
+            <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-4 max-w-md mx-auto">
               <Input 
                 type="email"
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
                 autoComplete="email"
                 aria-label="Email para newsletter"
                 placeholder="Seu melhor email"
-                className="bg-white/10 border-white/20 text-white placeholder:text-white/60"
+                className="bg-transparent border-white/20 text-white placeholder:text-white/60"
               />
-              <Button type="button" className="bg-accent hover:bg-accent/90 text-primary font-semibold px-8">
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-primary font-semibold px-8">
                 <Mail className="mr-2 h-4 w-4" />
                 Inscrever
               </Button>
-            </div>
+            </form>
+            {statusMessage && (
+              <p className="mt-4 text-sm text-white/80 max-w-md mx-auto">{statusMessage}</p>
+            )}
           </div>
         </div>
       </div>
@@ -64,11 +120,12 @@ const Footer = () => {
           {/* Company Info */}
           <div className="lg:col-span-1">
             <div className="mb-6">
-              <img 
-                src="/lovable-uploads/38eb8b38-b5cc-49b3-9b89-3613d102ad65.png" 
-                alt="Betteryou Kids Logo" 
-                className="h-12 w-auto mb-4 brightness-0 invert"
-              />
+              <div className="flex items-center gap-3 mb-4">
+                <School className="h-5 w-5 text-accent" />
+                <span className="text-sm uppercase tracking-[0.18em] text-accent font-semibold">
+                  Educação Efetiva
+                </span>
+              </div>
               <p className="text-primary-foreground/80 leading-relaxed mb-4">
                 Educação afetiva e inovadora que prepara as crianças para um futuro brilhante, 
                 em harmonia com a natureza e estimulando sua criatividade natural.
@@ -135,37 +192,61 @@ const Footer = () => {
 
           {/* Contact Info */}
           <div>
-            <h4 className="font-semibold mb-6">Informações de Contato</h4>
+            <h4 className="font-semibold mb-6">Informações de Contacto</h4>
             <div className="space-y-4">
               <div className="flex items-start space-x-3">
                 <MapPin className="h-5 w-5 text-accent mt-0.5" />
                 <div>
-                  <p className="font-medium">Luanda, Angola</p>
-                  <p className="text-sm text-primary-foreground/80">Rua Principal, Bairro Nobre</p>
+                  <p className="font-medium">Av. Cmte. Gika 150, Luanda</p>
+                  <a
+                    href="https://maps.app.goo.gl/r5rAJXaTU8F2Xccj9"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary-foreground/80 hover:text-accent transition-colors duration-200"
+                  >
+                    Ver no Google Maps
+                  </a>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="h-5 w-5 text-accent" />
                 <div>
-                  <p className="font-medium">+244 XXX XXX XXX</p>
-                  <p className="text-sm text-primary-foreground/80">Segunda a Sexta: 7h às 18h</p>
+                  <p className="font-medium">+244 921 669 893</p>
+                  <p className="text-sm text-primary-foreground/80">Chamada e WhatsApp</p>
+                </div>
+              </div>
+              <div className="flex items-start space-x-3">
+                <MapPin className="h-5 w-5 text-accent mt-0.5" />
+                <div>
+                  <p className="font-medium">Segunda Unidade</p>
+                  <p className="text-sm text-primary-foreground/80">Rua Urbanização Harmonia, 540 A Patriota casa N, Luanda</p>
+                  <a
+                    href="https://maps.app.goo.gl/cukitSpAWHWFv5jR7?g_st=ac"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sm text-primary-foreground/80 hover:text-accent transition-colors duration-200"
+                  >
+                    Ver no Google Maps
+                  </a>
+                </div>
+              </div>
+              <div className="flex items-center space-x-3">
+                <Phone className="h-5 w-5 text-accent" />
+                <div>
+                  <p className="font-medium">+244 942 043 710</p>
+                  <p className="text-sm text-primary-foreground/80">Contacto da Segunda Unidade</p>
                 </div>
               </div>
               <div className="flex items-center space-x-3">
                 <Mail className="h-5 w-5 text-accent" />
                 <div>
-                  <p className="font-medium">info@betteryoukids.ao</p>
-                  <p className="text-sm text-primary-foreground/80">Resposta em 24h</p>
+                  <p className="font-medium">patriota@betteryoukids.com</p>
+                  <p className="text-sm text-primary-foreground/80">Email da Segunda Unidade</p>
                 </div>
               </div>
             </div>
 
-            <Button 
-              type="button"
-              className="mt-6 w-full bg-accent hover:bg-accent/90 text-primary font-semibold"
-            >
-              Agendar Visita
-            </Button>
+
           </div>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import heroImage from "@/assets/hero-classroom.jpg";
 import natureImage from "@/assets/nature-play.jpg";
@@ -166,20 +167,22 @@ const Hero = () => {
 
           <div className="flex flex-col sm:flex-row gap-4 mb-8 animate-slide-in-right" style={{animationDelay: '0.6s'}}>
             <Button 
+              asChild
               size="lg" 
               className="bg-accent hover:bg-accent/90 text-primary font-semibold px-8 py-4 text-lg shadow-colorful hover:shadow-lg transition-all duration-300 hover:scale-105"
-              onClick={() => window.location.href = '/contato'}
             >
-              Agendar Visita
-              <ArrowRight className="ml-2 h-5 w-5" />
+              <Link to="/contato">
+                Agendar Visita
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </Link>
             </Button>
             <Button 
+              asChild
               variant="outline" 
               size="lg" 
               className="border-white text-white hover:bg-white hover:text-primary px-8 py-4 text-lg backdrop-blur-sm hover:scale-105 transition-all duration-300"
-              onClick={() => window.location.href = '/servicos'}
             >
-              Conhecer Serviços
+              <Link to="/servicos">Conhecer Serviços</Link>
             </Button>
           </div>
         </div>

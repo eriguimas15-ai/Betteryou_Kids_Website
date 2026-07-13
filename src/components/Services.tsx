@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Baby, Users, GraduationCap, Clock, Star, ArrowRight } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Baby, Users, GraduationCap, Clock, Star, ArrowRight, Gift } from "lucide-react";
 
 const Services = () => {
   const colorStyles = {
@@ -104,14 +105,14 @@ const Services = () => {
       icon: GraduationCap,
       title: "1º Ciclo",
       ageRange: "6-10 anos",
-      description: "Acompanhamento escolar dedicado ao ensino básico, equilibrando estudo, brincadeira e desenvolvimento pessoal.",
+      description: "Apoio educacional completo para o 1º Ciclo do Ensino Básico, com reforço escolar, atividades criativas e acompanhamento socioemocional.",
       features: [
-        "Apoio ao estudo e trabalhos de casa",
-        "Reforço escolar nas disciplinas principais",
-        "Atividades lúdicas e desportivas",
-        "Estímulo à leitura e criatividade",
-        "Promoção da autonomia e responsabilidade",
-        "Horário flexível, adaptado às necessidades das famílias"
+        "Reforço escolar e trabalhos de casa",
+        "Aulas de apoio em português, matemática e ciências",
+        "Atividades lúdicas que fortalecem a autonomia",
+        "Estímulo à leitura e expressão criativa",
+        "Preparação para avaliações e organização do estudo",
+        "Horários flexíveis adaptados às famílias"
       ],
       color: "accent",
       gradient: "from-accent to-accent/80"
@@ -130,6 +131,25 @@ const Services = () => {
       ],
       color: "purple",
       gradient: "from-purple to-purple/80"
+    },
+    {
+      icon: Gift,
+      title: "Festas e Eventos Infantis",
+      ageRange: "3-10 anos",
+      description: "Transformamos cada celebração numa experiência única, com um espaço acolhedor, divertido e preparado para receber aniversários, batizados, festas temáticas e outros eventos infantis.",
+      features: [
+        "Aluguer exclusivo do espaço",
+        "Parque de estacionamento",
+        "Ambiente seguro e confortável",
+        "Apoio na organização do evento",
+        "Festas de aniversário temáticas",
+        "Área de brincadeiras e entretenimento",
+        "Flexibilidade de horários",
+        "Espaço amplo para família e convidados",
+        "Pacotes adaptados às suas necessidades"
+      ],
+      color: "red",
+      gradient: "from-red to-red/80"
     }
   ];
 
@@ -211,12 +231,14 @@ const Services = () => {
                     </ul>
                   </div>
                   <Button 
+                    asChild
                     className="mt-6 w-full text-white hover:opacity-90"
                     style={{ backgroundColor: palette.button }}
-                    onClick={() => window.location.href = '/contato'}
                   >
-                    Saiba Mais
-                    <ArrowRight className="ml-2 h-4 w-4" />
+                    <Link to="/contato">
+                      Saiba Mais
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Link>
                   </Button>
                 </CardContent>
               </Card>
@@ -251,24 +273,24 @@ const Services = () => {
               Pronto para conhecer nossos serviços?
             </h3>
             <p className="text-white/90 mb-8 max-w-2xl mx-auto">
-              Entre em contato conosco para agendar uma visita e conhecer de perto 
+              Entre em contacto conosco para agendar uma visita e conhecer de perto 
               como podemos contribuir para o desenvolvimento do seu filho.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
+                asChild
                 size="lg" 
                 className="bg-white text-primary hover:bg-white/90 font-semibold px-8"
-                onClick={() => window.location.href = '/contato'}
               >
-                Agendar Visita
+                <Link to="/contato">Agendar Visita</Link>
               </Button>
               <Button 
+                asChild
                 variant="outline" 
                 size="lg" 
                 className="border-white text-white hover:bg-white hover:text-primary px-8"
-                onClick={() => window.location.href = '/contato'}
               >
-                Solicitar Informações
+                <Link to="/contato">Solicitar Informações</Link>
               </Button>
             </div>
           </div>

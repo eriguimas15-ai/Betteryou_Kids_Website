@@ -1,9 +1,25 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Star, Quote, Users, Award, Heart } from "lucide-react";
 
-const Testimonials = () => {
-  const testimonials = [
+interface Testimonial {
+  name: string;
+  role: string;
+  content: string;
+  rating: number;
+  service: string;
+  image: string;
+  highlight: string;
+}
+
+const STORAGE_KEY = "betteryou_depoimentos";
+
+const defaultTestimonials: Testimonial[] = [
     {
       name: "Maria Santos",
       role: "Mãe da Sofia (4 anos)",
@@ -60,6 +76,7 @@ const Testimonials = () => {
     }
   ];
 
+const Testimonials = () => {
   const stats = [
     {
       icon: Users,
@@ -110,6 +127,62 @@ const Testimonials = () => {
     }
   ];
 
+  const [testimonialsState, setTestimonialsState] = useState<Testimonial[]>(defaultTestimonials);
+  const [newEntry, setNewEntry] = useState({
+    name: "",
+    role: "",
+    service: "",
+    content: ""
+  });
+  const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored) as Testimonial[];
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setTestimonialsState(parsed);
+        }
+      } catch {
+        // ignore invalid storage data
+      }
+    }
+  }, []);
+
+  const saveTestimonials = (items: Testimonial[]) => {
+    setTestimonialsState(items);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
+  };
+
+  const handleInputChange = (field: keyof typeof newEntry, value: string) => {
+    setNewEntry((prev) => ({ ...prev, [field]: value }));
+    setMessage(null);
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!newEntry.name.trim() || !newEntry.role.trim() || !newEntry.service.trim() || !newEntry.content.trim()) {
+      setMessage("Por favor, preencha todos os campos antes de enviar.");
+      return;
+    }
+
+    const testimonial: Testimonial = {
+      name: newEntry.name.trim(),
+      role: newEntry.role.trim(),
+      content: newEntry.content.trim(),
+      rating: 5,
+      service: newEntry.service.trim(),
+      image: "🧡",
+      highlight: "Novo depoimento da família"
+    };
+
+    saveTestimonials([testimonial, ...testimonialsState]);
+    setNewEntry({ name: "", role: "", service: "", content: "" });
+    setMessage("Depoimento enviado! Obrigado por compartilhar a sua experiência.");
+  };
+
   return (
     <section id="testimonials" className="py-20 bg-gradient-to-b from-muted/30 to-white">
       <div className="container mx-auto px-4">
@@ -141,7 +214,7 @@ const Testimonials = () => {
 
         {/* Testimonials Grid */}
         <div className="grid lg:grid-cols-3 md:grid-cols-2 gap-6 mb-16">
-          {testimonials.map((testimonial, index) => (
+          {testimonialsState.map((testimonial, index) => (
             <Card key={index} className="shadow-soft hover:shadow-colorful transition-all duration-300 group">
               <CardContent className="p-6">
                 {/* Quote Icon */}
@@ -207,6 +280,72 @@ const Testimonials = () => {
           </div>
         </div>
 
+        {/* Add New Testimonial */}
+        <div className="bg-white rounded-2xl p-8 md:p-12 shadow-soft mb-16">
+          <div className="text-center mb-10">
+            <h3 className="text-3xl font-bold text-primary mb-4">Compartilhe seu depoimento</h3>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Sua opinião ajuda outras famílias a conhecerem a Betteryou Kids. Deixe o seu relato e inspire outras pessoas.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="grid gap-6 max-w-3xl mx-auto">
+            <div className="grid sm:grid-cols-2 gap-6">
+              <div>
+                <Label htmlFor="name">Nome</Label>
+                <Input
+                  id="name"
+                  value={newEntry.name}
+                  onChange={(e) => handleInputChange("name", e.target.value)}
+                  placeholder="Seu nome"
+                />
+              </div>
+              <div>
+                <Label htmlFor="role">Parentesco</Label>
+                <Input
+                  id="role"
+                  value={newEntry.role}
+                  onChange={(e) => handleInputChange("role", e.target.value)}
+                  placeholder="Mãe, pai, responsável..."
+                />
+              </div>
+            </div>
+
+            <div>
+              <Label htmlFor="service">Serviço</Label>
+              <Input
+                id="service"
+                value={newEntry.service}
+                onChange={(e) => handleInputChange("service", e.target.value)}
+                placeholder="Creche, Pré-Escolar, ATL..."
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="content">Depoimento</Label>
+              <Textarea
+                id="content"
+                value={newEntry.content}
+                onChange={(e) => handleInputChange("content", e.target.value)}
+                placeholder="Conte como foi a sua experiência"
+                rows={5}
+              />
+            </div>
+
+            {message && (
+              <div className="rounded-xl bg-accent/10 border border-accent/20 p-4 text-sm text-accent">
+                {message}
+              </div>
+            )}
+
+            <div className="text-center">
+              <Button type="submit" className="bg-accent hover:bg-accent/90 text-primary font-semibold px-8 py-4">
+                Enviar Depoimento
+              </Button>
+            </div>
+          </form>
+        </div>
+
         {/* CTA Section */}
         <div className="text-center mt-16">
           <div className="bg-gradient-hero rounded-2xl p-8 md:p-12 text-white">
@@ -220,9 +359,6 @@ const Testimonials = () => {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button className="bg-accent hover:bg-accent/90 text-primary font-semibold px-8 py-3 rounded-lg transition-all duration-300 hover:shadow-lg">
                 Agendar Visita
-              </button>
-              <button className="border-2 border-white text-white hover:bg-white hover:text-primary px-8 py-3 rounded-lg transition-all duration-300">
-                Falar com Consultora
               </button>
             </div>
           </div>

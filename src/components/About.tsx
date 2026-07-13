@@ -295,12 +295,12 @@ const About = () => {
                       <p className={`text-${service.color} font-medium mb-3`}>{service.age}</p>
                       <p className="text-sm text-muted-foreground flex-grow">{service.description}</p>
                       <Button 
+                        asChild
                         variant="outline" 
                         size="sm" 
                         className="mt-4 w-full"
-                        onClick={() => window.location.href = '/servicos'}
                       >
-                        Saiba Mais
+                        <Link to="/servicos">Saiba Mais</Link>
                       </Button>
                     </CardContent>
                   </Card>
@@ -330,11 +330,13 @@ const About = () => {
 
           <div className="text-center mt-8">
             <Button 
+              asChild
               className="bg-primary hover:bg-primary/90 text-primary-foreground px-8"
-              onClick={() => window.location.href = '/atividades'}
             >
-              Ver Todas as Atividades
-              <ArrowRight className="ml-2 h-4 w-4" />
+              <Link to="/atividades">
+                Ver Todas as Atividades
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
             </Button>
           </div>
         </div>

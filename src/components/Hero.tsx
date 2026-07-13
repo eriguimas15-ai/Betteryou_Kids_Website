@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight, Heart, Star } from "lucide-react";
 import heroImage from "@/assets/hero-classroom.jpg";
 import natureImage from "@/assets/nature-play.jpg";
@@ -192,20 +193,16 @@ const ModernSlider = () => {
 
           {/* Botões de ação amigáveis */}
           <div className="flex flex-col sm:flex-row gap-4 animate-fade-in-up" style={{animationDelay: '0.8s'}}>
-            <button className="group px-8 py-4 bg-gradient-to-r from-pink-400 to-purple-500 text-white font-semibold text-lg rounded-full hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl">
-              <span className="flex items-center justify-center">
-                <Heart className="mr-2 h-5 w-5 group-hover:animate-pulse" fill="currentColor" />
-                Agendar Visita
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
-              </span>
-            </button>
+            <Link to="/contato" className="group px-8 py-4 bg-gradient-to-r from-pink-400 to-purple-500 text-white font-semibold text-lg rounded-full hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl inline-flex items-center justify-center">
+              <Heart className="mr-2 h-5 w-5 group-hover:animate-pulse" fill="currentColor" />
+              Agendar Visita
+              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
+            </Link>
             
-            <button className="group px-8 py-4 bg-white/90 text-gray-700 font-semibold text-lg rounded-full border-2 border-green-300 hover:bg-green-50 hover:border-green-400 transition-all duration-300 hover:scale-105 shadow-lg">
-              <span className="flex items-center justify-center">
-                <Star className="mr-2 h-5 w-5 group-hover:text-yellow-500 transition-colors duration-300" fill="currentColor" />
-                Conhecer Serviços
-              </span>
-            </button>
+            <Link to="/servicos" className="group px-8 py-4 bg-white/90 text-gray-700 font-semibold text-lg rounded-full border-2 border-green-300 hover:bg-green-50 hover:border-green-400 transition-all duration-300 hover:scale-105 shadow-lg inline-flex items-center justify-center">
+              <Star className="mr-2 h-5 w-5 group-hover:text-yellow-500 transition-colors duration-300" fill="currentColor" />
+              Conhecer Serviços
+            </Link>
           </div>
         </div>
       </div>
