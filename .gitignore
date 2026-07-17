@@ -1,0 +1,54 @@
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+build/
+.next/
+out/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs and caches
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.cache/
+.turbo/
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Uploads and generated
+uploads/
+escola-api/uploads/
+escola-api/generated/
+**/generated/prisma/
+
+# Local Vite
+*.local
+
+# Coverage / test
+coverage/
+.nyc_output/
+
+# Local DB artefacts
+escola-api/prisma/dev.db
+escola-api/prisma/*.db
+escola-api/seed-result.txt

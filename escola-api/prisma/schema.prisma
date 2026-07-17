@@ -1,0 +1,522 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  DIRECAO
+  COMUNICACAO
+  COORDENACAO
+  PROFESSOR
+  ENCARREGADO
+  ALUNO
+}
+
+enum EnrollmentStatus {
+  PENDENTE_VALIDACAO
+  LISTA_ESPERA
+  CONFIRMADA
+  CANCELADA
+  EXPIRADA
+}
+
+enum WaitlistStatus {
+  AGUARDAR
+  NOTIFICADO
+  CONFIRMADO
+  EXPIRADO
+  CANCELADO
+}
+
+enum ContentStatus {
+  RASCUNHO
+  PUBLICADO
+  ARQUIVADO
+}
+
+enum RenewalStatus {
+  PENDENTE
+  LISTA_ESPERA
+  CONFIRMADA
+  CANCELADA
+}
+
+enum JobStatus {
+  RASCUNHO
+  PUBLICADA
+  ENCERRADA
+}
+
+enum StudentProfileStatus {
+  PENDENTE_FICHA
+  COMPLETA
+}
+
+model User {
+  id              String         @id @default(cuid())
+  name            String
+  email           String         @unique
+  passwordHash    String
+  role            Role           @default(ENCARREGADO)
+  active          Boolean        @default(true)
+  accessProfileId String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  accessProfile   AccessProfile? @relation(fields: [accessProfileId], references: [id], onDelete: SetNull)
+  refreshTokens   RefreshToken[]
+  auditLogs       AuditLog[]
+  contentPages    ContentPage[]  @relation("ContentAuthor")
+  mediaAssets     MediaAsset[]   @relation("MediaUploader")
+  students        Student[]      @relation("GuardianStudents")
+}
+
+/// Perfil de acesso configurável pelo admin (módulos da plataforma).
+model AccessProfile {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  /// Chave de sistema opcional (ADMIN, COMUNICACAO, …) para perfis seed
+  systemKey   String?  @unique
+  /// JSON array de chaves de módulo, ex.: ["dashboard","inscricoes"]
+  modules     Json
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  users       User[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+}
+
+model Unit {
+  id          String         @id @default(cuid())
+  name        String         @unique
+  address     String?
+  active      Boolean        @default(true)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  services    UnitService[]
+  rooms       Room[]
+  enrollments Enrollment[]
+  renewals    Renewal[]
+  students    Student[]
+}
+
+model ServiceOffering {
+  id               String                    @id @default(cuid())
+  name             String                    @unique
+  description      String?
+  active           Boolean                   @default(true)
+  createdAt        DateTime                  @default(now())
+  updatedAt        DateTime                  @updatedAt
+  units            UnitService[]
+  rooms            Room[]
+  enrollments      Enrollment[]
+  renewals         Renewal[]
+  students         Student[]
+  activityOfferings ActivityServiceOffering[]
+}
+
+model UnitService {
+  id        String          @id @default(cuid())
+  unitId    String
+  serviceId String
+  active    Boolean         @default(true)
+  unit      Unit            @relation(fields: [unitId], references: [id], onDelete: Cascade)
+  service   ServiceOffering @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([unitId, serviceId])
+}
+
+model AcademicYear {
+  id              String          @id @default(cuid())
+  label           String          @unique
+  startDate       DateTime?
+  endDate         DateTime?
+  active          Boolean         @default(false)
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  rooms           Room[]
+  enrollments     Enrollment[]
+  waitlistEntries WaitlistEntry[]
+  renewals        Renewal[]
+  students        Student[]
+  classGroups     ClassGroup[]
+}
+
+model Room {
+  id                 String          @id @default(cuid())
+  name               String
+  unitId             String
+  serviceId          String
+  academicYearId     String
+  /// Ex.: "1.ª Classe" (1.º Ciclo) — opcional
+  levelLabel         String?
+  /// Texto amigável, ex.: "1 a 2 anos"
+  ageLabel           String?
+  /// Idade mínima inclusiva (anos). Null = sem filtro.
+  minAgeYears        Float?
+  /// Idade máxima exclusiva (anos). Null = sem filtro.
+  maxAgeYears        Float?
+  capacity           Int
+  enrolledCount      Int             @default(0)
+  renewalReserved    Int             @default(0)
+  enrollmentReserved Int             @default(0)
+  active             Boolean         @default(true)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  unit               Unit            @relation(fields: [unitId], references: [id])
+  service            ServiceOffering @relation(fields: [serviceId], references: [id])
+  academicYear       AcademicYear    @relation(fields: [academicYearId], references: [id])
+  enrollments        Enrollment[]
+  waitlistEntries    WaitlistEntry[]
+  renewals           Renewal[]
+  students           Student[]
+  classGroups        ClassGroup[]
+
+  @@unique([name, unitId, academicYearId])
+  @@index([unitId, serviceId, academicYearId, active])
+}
+
+/// Turma académica associada a uma sala/ano.
+model ClassGroup {
+  id             String       @id @default(cuid())
+  name           String
+  roomId         String
+  academicYearId String
+  teacherName    String?
+  notes          String?      @db.Text
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  room           Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+
+  @@unique([name, roomId, academicYearId])
+  @@index([academicYearId, active])
+}
+
+model Enrollment {
+  id                   String               @id @default(cuid())
+  roomId               String?
+  academicYearId       String
+  unitId               String
+  serviceId            String
+  childFullName        String
+  childBirthDate       DateTime
+  childSex             String
+  childBirthPlace      String?
+  childNationality     String
+  childAddress         String?
+  guardianFullName     String
+  guardianIdNumber     String?
+  guardianPhone        String
+  guardianAltPhone     String?
+  guardianEmail        String
+  guardianProfession   String?
+  guardianRelationship String
+  guardianAddress      String?
+  emergencyName        String?
+  emergencyPhone       String?
+  emergencyRelation    String?
+  allergies            String?
+  medication           String?
+  foodRestrictions     String?
+  medicalNotes         String?
+  guardians            Json?
+  emergencyContacts    Json?
+  activities           Json?
+  status               EnrollmentStatus     @default(PENDENTE_VALIDACAO)
+  priority             Int                  @default(0)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  room                 Room?                @relation(fields: [roomId], references: [id])
+  academicYear         AcademicYear         @relation(fields: [academicYearId], references: [id])
+  unit                 Unit                 @relation(fields: [unitId], references: [id])
+  service              ServiceOffering      @relation(fields: [serviceId], references: [id])
+  waitlistEntry        WaitlistEntry?
+  documents            EnrollmentDocument[]
+  student              Student?
+
+  @@index([status])
+  @@index([guardianEmail])
+}
+
+model WaitlistEntry {
+  id               String         @id @default(cuid())
+  enrollmentId     String         @unique
+  roomId           String?
+  academicYearId   String
+  priority         Int            @default(0)
+  status           WaitlistStatus @default(AGUARDAR)
+  notifiedAt       DateTime?
+  responseDeadline DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  enrollment       Enrollment     @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  room             Room?          @relation(fields: [roomId], references: [id])
+  academicYear     AcademicYear   @relation(fields: [academicYearId], references: [id])
+
+  @@index([status, priority])
+}
+
+model EnrollmentDocument {
+  id           String     @id @default(cuid())
+  enrollmentId String
+  type         String
+  fileName     String
+  filePath     String
+  mimeType     String?
+  createdAt    DateTime   @default(now())
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+}
+
+model ContentPage {
+  id          String           @id @default(cuid())
+  slug        String           @unique
+  title       String
+  status      ContentStatus    @default(RASCUNHO)
+  authorId    String?
+  publishedAt DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  author      User?            @relation("ContentAuthor", fields: [authorId], references: [id])
+  sections    ContentSection[]
+}
+
+model ContentSection {
+  id        String      @id @default(cuid())
+  pageId    String
+  key       String
+  label     String
+  value     String      @db.Text
+  mediaId   String?
+  sortOrder Int         @default(0)
+  updatedAt DateTime    @updatedAt
+  page      ContentPage @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  media     MediaAsset? @relation(fields: [mediaId], references: [id])
+
+  @@unique([pageId, key])
+}
+
+model MediaAsset {
+  id           String           @id @default(cuid())
+  fileName     String
+  originalName String
+  mimeType     String
+  filePath     String
+  altText      String?
+  uploadedById String?
+  createdAt    DateTime         @default(now())
+  uploadedBy   User?            @relation("MediaUploader", fields: [uploadedById], references: [id])
+  sections     ContentSection[]
+  testimonials Testimonial[]
+  galleryItems GalleryItem[]
+}
+
+model Testimonial {
+  id         String        @id @default(cuid())
+  authorName String
+  text       String        @db.Text
+  unitName   String?
+  featured   Boolean       @default(false)
+  status     ContentStatus @default(RASCUNHO)
+  mediaId    String?
+  sortOrder  Int           @default(0)
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  media      MediaAsset?   @relation(fields: [mediaId], references: [id])
+}
+
+model GalleryAlbum {
+  id        String        @id @default(cuid())
+  title     String
+  slug      String        @unique
+  status    ContentStatus @default(RASCUNHO)
+  sortOrder Int           @default(0)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  items     GalleryItem[]
+}
+
+model GalleryItem {
+  id        String       @id @default(cuid())
+  albumId   String
+  mediaId   String
+  caption   String?
+  sortOrder Int          @default(0)
+  createdAt DateTime     @default(now())
+  album     GalleryAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  media     MediaAsset   @relation(fields: [mediaId], references: [id])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String
+  entityId  String?
+  metadata  Json?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([entity, entityId])
+}
+
+model Renewal {
+  id                   String         @id @default(cuid())
+  academicYearId       String
+  unitId               String
+  serviceId            String
+  roomId               String?
+  childFullName        String
+  childBirthDate       DateTime?
+  childSex             String?
+  childBirthPlace      String?
+  childNationality     String?
+  childAddress         String?
+  guardianFullName     String
+  guardianIdNumber     String?
+  guardianPhone        String
+  guardianAltPhone     String?
+  guardianEmail        String
+  guardianProfession   String?
+  guardianRelationship String?
+  guardianAddress      String?
+  emergencyName        String?
+  emergencyPhone       String?
+  emergencyRelation    String?
+  allergies            String?
+  medication           String?
+  foodRestrictions     String?
+  medicalNotes         String?
+  guardians            Json?
+  emergencyContacts    Json?
+  activities           Json?
+  previousYearLabel    String?
+  notes                String?        @db.Text
+  status               RenewalStatus  @default(PENDENTE)
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  academicYear         AcademicYear   @relation(fields: [academicYearId], references: [id])
+  unit                 Unit           @relation(fields: [unitId], references: [id])
+  service              ServiceOffering @relation(fields: [serviceId], references: [id])
+  room                 Room?          @relation(fields: [roomId], references: [id])
+  student              Student?
+
+  @@index([status])
+  @@index([guardianEmail])
+}
+
+model JobOpening {
+  id           String    @id @default(cuid())
+  title        String
+  department   String?
+  location     String?
+  description  String    @db.Text
+  requirements String?   @db.Text
+  status       JobStatus @default(RASCUNHO)
+  publishedAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([status])
+}
+
+enum ActivityPricing {
+  INCLUDED
+  PAID
+}
+
+model ActivityOffering {
+  id          String                    @id @default(cuid())
+  name        String                    @unique
+  category    String?
+  description String?                   @db.Text
+  active      Boolean                   @default(true)
+  sortOrder   Int                       @default(0)
+  createdAt   DateTime                  @default(now())
+  updatedAt   DateTime                  @updatedAt
+  services    ActivityServiceOffering[]
+
+  @@index([active, sortOrder])
+}
+
+/// Actividades disponíveis por serviço (N/A = sem registo nesta tabela).
+model ActivityServiceOffering {
+  id         String           @id @default(cuid())
+  activityId String
+  serviceId  String
+  pricing    ActivityPricing
+  /// Preço em AKZ (unidades inteiras). Null quando INCLUDED.
+  priceAkz   Int?
+  active     Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  activity   ActivityOffering @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  service    ServiceOffering  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, serviceId])
+  @@index([serviceId, active])
+}
+
+/// Ficha do aluno — preenchida/atualizada pelo encarregado após aceitação.
+model Student {
+  id                   String               @id @default(cuid())
+  guardianUserId       String?
+  enrollmentId         String?              @unique
+  renewalId            String?              @unique
+  academicYearId       String
+  unitId               String
+  serviceId            String
+  roomId               String?
+  childFullName        String
+  childBirthDate       DateTime?
+  childSex             String?
+  childBirthPlace      String?
+  childNationality     String?
+  childAddress         String?
+  guardianFullName     String
+  guardianIdNumber     String?
+  guardianPhone        String
+  guardianAltPhone     String?
+  guardianEmail        String
+  guardianProfession   String?
+  guardianRelationship String?
+  guardianAddress      String?
+  emergencyName        String?
+  emergencyPhone       String?
+  emergencyRelation    String?
+  allergies            String?              @db.Text
+  medication           String?              @db.Text
+  foodRestrictions     String?              @db.Text
+  medicalNotes         String?              @db.Text
+  guardians            Json?
+  emergencyContacts    Json?
+  activities           Json?
+  profileStatus        StudentProfileStatus @default(PENDENTE_FICHA)
+  createdAt            DateTime             @default(now())
+  updatedAt            DateTime             @updatedAt
+  guardianUser         User?                @relation("GuardianStudents", fields: [guardianUserId], references: [id], onDelete: SetNull)
+  enrollment           Enrollment?          @relation(fields: [enrollmentId], references: [id], onDelete: SetNull)
+  renewal              Renewal?             @relation(fields: [renewalId], references: [id], onDelete: SetNull)
+  academicYear         AcademicYear         @relation(fields: [academicYearId], references: [id])
+  unit                 Unit                 @relation(fields: [unitId], references: [id])
+  service              ServiceOffering      @relation(fields: [serviceId], references: [id])
+  room                 Room?                @relation(fields: [roomId], references: [id])
+
+  @@index([guardianEmail])
+  @@index([profileStatus])
+  @@index([guardianUserId])
+}

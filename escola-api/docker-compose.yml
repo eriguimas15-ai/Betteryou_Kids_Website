@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: betteryou-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: betteryou
+      POSTGRES_PASSWORD: betteryou
+      POSTGRES_DB: betteryou_kids
+    volumes:
+      - betteryou_pg_data:/var/lib/postgresql/data
+
+volumes:
+  betteryou_pg_data:
