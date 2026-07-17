@@ -104,6 +104,7 @@ async function main() {
         'espera',
         'salas',
         'turmas',
+        'actividades',
         'emprego',
         'conteudo',
         'acessos',
@@ -120,6 +121,7 @@ async function main() {
         'espera',
         'salas',
         'turmas',
+        'actividades',
         'emprego',
         'conteudo',
       ],
@@ -140,6 +142,7 @@ async function main() {
         'espera',
         'salas',
         'turmas',
+        'actividades',
       ],
     },
   ];

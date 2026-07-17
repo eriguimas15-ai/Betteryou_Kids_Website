@@ -12,11 +12,14 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JobStatus, RenewalStatus, Role } from '@prisma/client';
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEmail,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
+  Min,
   MinLength,
   ValidateNested,
 } from 'class-validator';
@@ -32,6 +35,80 @@ import {
   EmergencyContactDto,
   GuardianDto,
 } from '../enrollments/dto/create-enrollment.dto';
+import { ActivityPricing } from '@prisma/client';
+
+class ActivityServiceLinkDto {
+  @IsString()
+  serviceId: string;
+
+  @IsEnum(ActivityPricing)
+  pricing: ActivityPricing;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(0)
+  priceAkz?: number | null;
+}
+
+class CreateActivityDto {
+  @IsString()
+  @MinLength(2)
+  name: string;
+
+  @IsOptional()
+  @IsString()
+  category?: string | null;
+
+  @IsOptional()
+  @IsString()
+  description?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ActivityServiceLinkDto)
+  services?: ActivityServiceLinkDto[];
+}
+
+class UpdateActivityDto {
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  name?: string;
+
+  @IsOptional()
+  @IsString()
+  category?: string | null;
+
+  @IsOptional()
+  @IsString()
+  description?: string | null;
+
+  @IsOptional()
+  @IsBoolean()
+  active?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  sortOrder?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ActivityServiceLinkDto)
+  services?: ActivityServiceLinkDto[];
+}
 
 class CreateRenewalDto {
   @IsString()
@@ -313,5 +390,26 @@ export class ActivitiesController {
   @Get()
   listAll() {
     return this.activities.listAll();
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO)
+  @Post()
+  create(@Body() dto: CreateActivityDto) {
+    return this.activities.create(dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO)
+  @Patch(':id')
+  update(@Param('id') id: string, @Body() dto: UpdateActivityDto) {
+    return this.activities.update(id, dto);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO)
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.activities.remove(id);
   }
 }

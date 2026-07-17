@@ -222,6 +222,19 @@ export const api = {
         ? `/activities/public?serviceName=${encodeURIComponent(serviceName)}`
         : "/activities/public",
     ),
+  getActivitiesAdmin: () => request<ActivityOffering[]>("/activities"),
+  createActivity: (body: ActivityPayload) =>
+    request<ActivityOffering>("/activities", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  updateActivity: (id: string, body: Partial<ActivityPayload>) =>
+    request<ActivityOffering>(`/activities/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(body),
+    }),
+  deleteActivity: (id: string) =>
+    request<{ ok: boolean }>(`/activities/${id}`, { method: "DELETE" }),
   getJobsAdmin: () => request<JobOpening[]>("/jobs"),
   createJob: (body: JobPayload) =>
     request<JobOpening>("/jobs", {
@@ -622,6 +635,19 @@ export type ActivityOffering = {
     pricing: "INCLUDED" | "PAID";
     priceAkz: number | null;
     service: { id: string; name: string };
+  }>;
+};
+
+export type ActivityPayload = {
+  name: string;
+  category?: string | null;
+  description?: string | null;
+  active?: boolean;
+  sortOrder?: number;
+  services?: Array<{
+    serviceId: string;
+    pricing: "INCLUDED" | "PAID";
+    priceAkz?: number | null;
   }>;
 };
 

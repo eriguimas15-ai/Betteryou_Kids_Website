@@ -3086,6 +3086,438 @@ function FichaAluno({
   );
 }
 
+function ActividadesAdmin({
+  needsLogin,
+  canManage,
+  onLogin,
+}: {
+  needsLogin: boolean;
+  canManage: boolean;
+  onLogin: () => void;
+}) {
+  type ServiceLinkDraft = {
+    serviceId: string;
+    pricing: "INCLUDED" | "PAID";
+    priceAkz: string;
+  };
+
+  const emptyForm = () => ({
+    name: "",
+    category: "",
+    active: true,
+    sortOrder: "0",
+    services: [] as ServiceLinkDraft[],
+  });
+
+  const [items, setItems] = useState<ActivityOffering[]>([]);
+  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [actioningId, setActioningId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
+  const [form, setForm] = useState(emptyForm);
+
+  const load = () => {
+    if (needsLogin || !canManage) return;
+    setLoading(true);
+    Promise.all([api.getActivitiesAdmin(), api.getServices()])
+      .then(([activities, serviceList]) => {
+        setItems(activities);
+        setServices(serviceList.filter((s) => s.active));
+      })
+      .catch(() => {
+        setItems([]);
+        setServices([]);
+      })
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [needsLogin, canManage]);
+
+  const startEdit = (activity: ActivityOffering) => {
+    setEditingId(activity.id);
+    setForm({
+      name: activity.name,
+      category: activity.category || "",
+      active: activity.active,
+      sortOrder: String(activity.sortOrder ?? 0),
+      services: (activity.services || []).map((link) => ({
+        serviceId: link.service.id,
+        pricing: link.pricing,
+        priceAkz: link.priceAkz != null ? String(link.priceAkz) : "",
+      })),
+    });
+    setMessage("");
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setForm(emptyForm());
+  };
+
+  const toggleService = (serviceId: string) => {
+    setForm((current) => {
+      const exists = current.services.some((s) => s.serviceId === serviceId);
+      if (exists) {
+        return {
+          ...current,
+          services: current.services.filter((s) => s.serviceId !== serviceId),
+        };
+      }
+      return {
+        ...current,
+        services: [
+          ...current.services,
+          { serviceId, pricing: "PAID", priceAkz: "40000" },
+        ],
+      };
+    });
+  };
+
+  const updateServiceLink = (
+    serviceId: string,
+    patch: Partial<ServiceLinkDraft>,
+  ) => {
+    setForm((current) => ({
+      ...current,
+      services: current.services.map((s) =>
+        s.serviceId === serviceId ? { ...s, ...patch } : s,
+      ),
+    }));
+  };
+
+  const toPayload = (): ActivityPayload => ({
+    name: form.name.trim(),
+    category: form.category.trim() || null,
+    active: form.active,
+    sortOrder: Number(form.sortOrder) || 0,
+    services: form.services.map((s) => ({
+      serviceId: s.serviceId,
+      pricing: s.pricing,
+      priceAkz:
+        s.pricing === "INCLUDED"
+          ? null
+          : s.priceAkz.trim()
+            ? Number(s.priceAkz)
+            : null,
+    })),
+  });
+
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!form.name.trim()) {
+      setMessage("Indique o nome da actividade.");
+      return;
+    }
+    setSaving(true);
+    setMessage("");
+    try {
+      const payload = toPayload();
+      if (editingId) {
+        await api.updateActivity(editingId, payload);
+        setMessage("Actividade actualizada.");
+      } else {
+        await api.createActivity(payload);
+        setMessage("Actividade criada.");
+      }
+      cancelEdit();
+      load();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível guardar a actividade.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (id: string) => {
+    setActioningId(id);
+    setMessage("");
+    try {
+      await api.deleteActivity(id);
+      if (editingId === id) cancelEdit();
+      setMessage("Actividade removida.");
+      load();
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível remover a actividade.",
+      );
+    } finally {
+      setActioningId(null);
+    }
+  };
+
+  if (needsLogin) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 py-16 text-center">
+        <h1 className="text-2xl font-bold">Actividades</h1>
+        <p className="text-muted-foreground">
+          Inicie sessão para gerir as actividades extracurriculares.
+        </p>
+        <Button onClick={onLogin}>Entrar</Button>
+      </div>
+    );
+  }
+
+  if (!canManage) {
+    return (
+      <div className="mx-auto max-w-lg space-y-4 py-16 text-center">
+        <h1 className="text-2xl font-bold">Actividades</h1>
+        <p className="text-muted-foreground">
+          Não tem permissão para gerir actividades.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <p className="mb-2 text-sm font-medium text-secondary">OFERTA</p>
+        <h1 className="text-3xl font-bold">Actividades</h1>
+        <p className="mt-2 text-muted-foreground">
+          Adicione ou remova actividades e associe-as aos serviços com preço ou
+          &quot;Incluído&quot;.
+        </p>
+      </div>
+
+      {message && (
+        <p
+          className={`rounded-lg p-3 text-sm ${
+            message.toLowerCase().includes("não") ||
+            message.toLowerCase().includes("falh") ||
+            message.toLowerCase().includes("indique")
+              ? "bg-destructive/10 text-destructive"
+              : "bg-green/10 text-green"
+          }`}
+        >
+          {message}
+        </p>
+      )}
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">
+            {editingId ? "Editar actividade" : "Nova actividade"}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form className="space-y-4" onSubmit={submit}>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Nome">
+                <Input
+                  required
+                  value={form.name}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                />
+              </Field>
+              <Field label="Categoria">
+                <Input
+                  value={form.category}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, category: e.target.value }))
+                  }
+                  placeholder="Ex.: Artística"
+                />
+              </Field>
+              <Field label="Ordem">
+                <Input
+                  type="number"
+                  value={form.sortOrder}
+                  onChange={(e) =>
+                    setForm((f) => ({ ...f, sortOrder: e.target.value }))
+                  }
+                />
+              </Field>
+              <div className="flex items-end gap-3 pb-1">
+                <Switch
+                  checked={form.active}
+                  onCheckedChange={(checked) =>
+                    setForm((f) => ({ ...f, active: checked }))
+                  }
+                />
+                <span className="text-sm">Activa (visível nas candidaturas)</span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Serviços associados</p>
+              <p className="text-xs text-muted-foreground">
+                Seleccione os serviços em que a actividade está disponível e
+                indique se está incluída ou tem preço.
+              </p>
+              <div className="space-y-2">
+                {services.map((service) => {
+                  const link = form.services.find(
+                    (s) => s.serviceId === service.id,
+                  );
+                  const checked = !!link;
+                  return (
+                    <div
+                      key={service.id}
+                      className="rounded-lg border border-border/70 p-3"
+                    >
+                      <label className="flex items-center gap-3 text-sm">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4"
+                          checked={checked}
+                          onChange={() => toggleService(service.id)}
+                        />
+                        <span className="font-medium">{service.name}</span>
+                      </label>
+                      {checked && link && (
+                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                          <Field label="Preço">
+                            <Select
+                              value={link.pricing}
+                              onValueChange={(v) =>
+                                updateServiceLink(service.id, {
+                                  pricing: v as "INCLUDED" | "PAID",
+                                })
+                              }
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="INCLUDED">Incluído</SelectItem>
+                                <SelectItem value="PAID">Pago (AKZ)</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </Field>
+                          {link.pricing === "PAID" && (
+                            <Field label="Valor (AKZ)">
+                              <Input
+                                type="number"
+                                min={0}
+                                step={1000}
+                                value={link.priceAkz}
+                                onChange={(e) =>
+                                  updateServiceLink(service.id, {
+                                    priceAkz: e.target.value,
+                                  })
+                                }
+                                placeholder="40000"
+                              />
+                            </Field>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <Button type="submit" disabled={saving}>
+                {saving
+                  ? "A guardar..."
+                  : editingId
+                    ? "Guardar alterações"
+                    : "Adicionar actividade"}
+              </Button>
+              {editingId && (
+                <Button type="button" variant="outline" onClick={cancelEdit}>
+                  Cancelar
+                </Button>
+              )}
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Actividades registadas</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {loading ? (
+            <p className="text-sm text-muted-foreground">A carregar...</p>
+          ) : items.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              Ainda não existem actividades.
+            </p>
+          ) : (
+            items.map((activity) => (
+              <div
+                key={activity.id}
+                className="flex flex-col gap-3 rounded-lg border p-4 sm:flex-row sm:items-start sm:justify-between"
+              >
+                <div className="space-y-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">{activity.name}</p>
+                    {!activity.active && (
+                      <Badge variant="secondary">Inactiva</Badge>
+                    )}
+                    {activity.category && (
+                      <Badge variant="outline">{activity.category}</Badge>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {(activity.services || []).length === 0 ? (
+                      <span className="text-sm text-muted-foreground">
+                        Sem serviços associados
+                      </span>
+                    ) : (
+                      (activity.services || []).map((link) => (
+                        <Badge key={link.id} variant="secondary">
+                          {link.service.name}
+                          {": "}
+                          {link.pricing === "INCLUDED"
+                            ? "Incluído"
+                            : link.priceAkz != null
+                              ? `AKZ ${link.priceAkz.toLocaleString("pt-PT", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}`
+                              : "Pago"}
+                        </Badge>
+                      ))
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => startEdit(activity)}
+                  >
+                    <Pencil className="mr-1 h-4 w-4" />
+                    Editar
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={actioningId === activity.id}
+                    onClick={() => remove(activity.id)}
+                  >
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
 function Emprego({
   loggedIn,
   canManage,
