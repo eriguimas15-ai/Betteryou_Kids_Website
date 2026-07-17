@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { JobStatus, RenewalStatus } from '@prisma/client';
+import { JobStatus, RenewalStatus, ActivityPricing } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StudentsService } from '../students/students.service';
 import { RoomsService } from '../rooms/rooms.service';
@@ -275,6 +275,13 @@ export class JobsService {
 export class ActivitiesService {
   constructor(private prisma: PrismaService) {}
 
+  private includeServices = {
+    services: {
+      include: { service: { select: { id: true, name: true } } },
+      orderBy: { service: { name: 'asc' as const } },
+    },
+  };
+
   listPublic(serviceName?: string) {
     const trimmed = serviceName?.trim();
     if (trimmed) {
@@ -324,12 +331,146 @@ export class ActivitiesService {
   listAll() {
     return this.prisma.activityOffering.findMany({
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
-      include: {
-        services: {
-          include: { service: { select: { id: true, name: true } } },
-          orderBy: { service: { name: 'asc' } },
-        },
-      },
+      include: this.includeServices,
     });
+  }
+
+  private async normalizeServiceLinks(
+    services: Array<{
+      serviceId: string;
+      pricing: ActivityPricing;
+      priceAkz?: number | null;
+    }>,
+  ) {
+    if (!services?.length) return [];
+    const ids = [...new Set(services.map((s) => s.serviceId.trim()).filter(Boolean))];
+    const found = await this.prisma.serviceOffering.findMany({
+      where: { id: { in: ids } },
+      select: { id: true },
+    });
+    if (found.length !== ids.length) {
+      throw new BadRequestException('Um ou mais serviços são inválidos.');
+    }
+    return services.map((s) => ({
+      serviceId: s.serviceId.trim(),
+      pricing: s.pricing,
+      priceAkz:
+        s.pricing === ActivityPricing.INCLUDED
+          ? null
+          : s.priceAkz != null && s.priceAkz >= 0
+            ? Math.round(s.priceAkz)
+            : null,
+      active: true,
+    }));
+  }
+
+  async create(data: {
+    name: string;
+    category?: string | null;
+    description?: string | null;
+    active?: boolean;
+    sortOrder?: number;
+    services?: Array<{
+      serviceId: string;
+      pricing: ActivityPricing;
+      priceAkz?: number | null;
+    }>;
+  }) {
+    const name = data.name.trim();
+    if (!name) throw new BadRequestException('Nome da actividade é obrigatório.');
+    const links = await this.normalizeServiceLinks(data.services ?? []);
+    const existing = await this.prisma.activityOffering.findUnique({
+      where: { name },
+    });
+    if (existing) {
+      throw new BadRequestException('Já existe uma actividade com este nome.');
+    }
+    return this.prisma.activityOffering.create({
+      data: {
+        name,
+        category: data.category?.trim() || null,
+        description: data.description?.trim() || null,
+        active: data.active ?? true,
+        sortOrder: data.sortOrder ?? 0,
+        services: links.length
+          ? { create: links }
+          : undefined,
+      },
+      include: this.includeServices,
+    });
+  }
+
+  async update(
+    id: string,
+    data: {
+      name?: string;
+      category?: string | null;
+      description?: string | null;
+      active?: boolean;
+      sortOrder?: number;
+      services?: Array<{
+        serviceId: string;
+        pricing: ActivityPricing;
+        priceAkz?: number | null;
+      }>;
+    },
+  ) {
+    const current = await this.prisma.activityOffering.findUnique({
+      where: { id },
+    });
+    if (!current) throw new NotFoundException('Actividade não encontrada.');
+
+    if (data.name != null) {
+      const name = data.name.trim();
+      if (!name) throw new BadRequestException('Nome da actividade é obrigatório.');
+      const clash = await this.prisma.activityOffering.findFirst({
+        where: { name, NOT: { id } },
+      });
+      if (clash) {
+        throw new BadRequestException('Já existe uma actividade com este nome.');
+      }
+    }
+
+    const links =
+      data.services !== undefined
+        ? await this.normalizeServiceLinks(data.services)
+        : null;
+
+    return this.prisma.$transaction(async (tx) => {
+      if (links) {
+        await tx.activityServiceOffering.deleteMany({
+          where: { activityId: id },
+        });
+        if (links.length) {
+          await tx.activityServiceOffering.createMany({
+            data: links.map((link) => ({ ...link, activityId: id })),
+          });
+        }
+      }
+      return tx.activityOffering.update({
+        where: { id },
+        data: {
+          ...(data.name != null ? { name: data.name.trim() } : {}),
+          ...(data.category !== undefined
+            ? { category: data.category?.trim() || null }
+            : {}),
+          ...(data.description !== undefined
+            ? { description: data.description?.trim() || null }
+            : {}),
+          ...(data.active !== undefined ? { active: data.active } : {}),
+          ...(data.sortOrder !== undefined ? { sortOrder: data.sortOrder } : {}),
+        },
+        include: this.includeServices,
+      });
+    });
+  }
+
+  async remove(id: string) {
+    const current = await this.prisma.activityOffering.findUnique({
+      where: { id },
+    });
+    if (!current) throw new NotFoundException('Actividade não encontrada.');
+    await this.prisma.activityOffering.delete({ where: { id } });
+    return { ok: true };
   }
 }

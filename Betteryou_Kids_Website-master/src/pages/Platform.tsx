@@ -21,6 +21,7 @@ import {
   RefreshCw,
   School,
   Shield,
+  Sparkles,
   Trash2,
   Users,
   X,
@@ -53,6 +54,8 @@ import {
   SESSION_EXPIRED_EVENT,
   type AcademicYear,
   type AccessProfile,
+  type ActivityOffering,
+  type ActivityPayload,
   type AdminRoom,
   type ClassGroup,
   type DashboardOverview,
@@ -98,10 +101,16 @@ function mapPublicActivities(
     pricing?: "INCLUDED" | "PAID";
     priceAkz?: number | null;
   }>,
-): ActivityOption[] {
+): ActivityOption[] | null {
+  if (
+    list.length === 0 ||
+    !list.every((item) => item.pricing === "INCLUDED" || item.pricing === "PAID")
+  ) {
+    return null;
+  }
   return list.map((item) => ({
     name: item.name,
-    pricing: item.pricing === "INCLUDED" ? "INCLUDED" : "PAID",
+    pricing: item.pricing as "INCLUDED" | "PAID",
     priceAkz: item.priceAkz ?? null,
   }));
 }
@@ -114,6 +123,7 @@ type View =
   | "espera"
   | "salas"
   | "turmas"
+  | "actividades"
   | "emprego"
   | "conteudo"
   | "acessos"
@@ -183,6 +193,7 @@ const nav = [
   { id: "espera" as View, label: "Lista de espera", icon: Users },
   { id: "salas" as View, label: "Salas", icon: DoorOpen },
   { id: "turmas" as View, label: "Turmas", icon: Users },
+  { id: "actividades" as View, label: "Actividades", icon: Sparkles },
   { id: "emprego" as View, label: "Vagas de emprego", icon: Briefcase },
   { id: "conteudo" as View, label: "Conteúdo do site", icon: FileText },
   { id: "acessos" as View, label: "Utilizadores e acessos", icon: Shield },
@@ -769,6 +780,17 @@ export default function Platform({
           {view === "turmas" && (
             <TurmasAdmin needsLogin={!token} onLogin={() => goTo("login")} />
           )}
+          {view === "actividades" && (
+            <ActividadesAdmin
+              needsLogin={!token}
+              canManage={
+                modules.includes("actividades") &&
+                !!token &&
+                ["ADMIN", "DIRECAO", "COORDENACAO"].includes(userRole)
+              }
+              onLogin={() => goTo("login")}
+            />
+          )}
           {view === "conteudo" && (
             <ContentEditor
               needsLogin={!token}
@@ -1104,8 +1126,9 @@ function Enrollment({
     api
       .getActivitiesPublic(service)
       .then((list) => {
-        if (!active || list.length === 0) return;
+        if (!active) return;
         const mapped = mapPublicActivities(list);
+        if (!mapped) return;
         setActivityOptions(mapped);
         setActivities((current) =>
           filterActivitiesForService(current, mapped),
@@ -2074,16 +2097,12 @@ function Renovacoes({
     const fallback = activitiesForService(serviceName);
     setActivityOptions(fallback);
     setActivities((current) => filterActivitiesForService(current, fallback));
-    if (!loggedIn) {
-      return () => {
-        active = false;
-      };
-    }
     api
       .getActivitiesPublic(serviceName)
       .then((list) => {
-        if (!active || list.length === 0) return;
+        if (!active) return;
         const mapped = mapPublicActivities(list);
+        if (!mapped) return;
         setActivityOptions(mapped);
         setActivities((current) =>
           filterActivitiesForService(current, mapped),
@@ -2093,7 +2112,7 @@ function Renovacoes({
     return () => {
       active = false;
     };
-  }, [loggedIn, form.serviceName]);
+  }, [form.serviceName]);
 
   useEffect(() => {
     if (form.serviceName !== "1.º Ciclo") setLevelLabel("");
@@ -2761,8 +2780,9 @@ function FichaAluno({
     api
       .getActivitiesPublic(serviceName)
       .then((list) => {
-        if (!active || list.length === 0) return;
+        if (!active) return;
         const mapped = mapPublicActivities(list);
+        if (!mapped) return;
         setActivityOptions(mapped);
         setActivities((current) =>
           filterActivitiesForService(current, mapped),
