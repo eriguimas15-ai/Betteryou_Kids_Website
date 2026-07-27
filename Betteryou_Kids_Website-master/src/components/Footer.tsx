@@ -128,7 +128,7 @@ const Footer = () => {
                 </span>
               </div>
               <p className="text-primary-foreground/80 leading-relaxed mb-4">
-                Educação afetiva e inovadora que prepara as crianças para um futuro brilhante, 
+                Educação afectiva e inovadora que prepara as crianças para um futuro brilhante, 
                 em harmonia com a natureza e estimulando sua criatividade natural.
               </p>
               <div className="flex items-center text-accent">

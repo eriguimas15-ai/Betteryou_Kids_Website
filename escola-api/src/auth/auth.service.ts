@@ -9,6 +9,7 @@ import * as bcrypt from 'bcrypt';
 import { createHash, randomBytes } from 'crypto';
 import { PrismaService } from '../prisma/prisma.service';
 import { UsersService } from '../users/users.service';
+import { AuditService } from '../common/audit/audit.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { Role } from '@prisma/client';
@@ -20,6 +21,7 @@ export class AuthService {
     private jwt: JwtService,
     private config: ConfigService,
     private users: UsersService,
+    private audit: AuditService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -60,6 +62,13 @@ export class AuthService {
     if (!valid) {
       throw new UnauthorizedException('Credenciais inválidas');
     }
+    await this.audit.record({
+      userId: user.id,
+      action: 'LOGIN',
+      entity: 'User',
+      entityId: user.id,
+      metadata: { email: user.email, role: user.role },
+    });
     return this.issueTokens(user.id, user.email, user.role, user.name);
   }
 

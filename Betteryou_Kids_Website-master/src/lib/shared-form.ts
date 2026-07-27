@@ -40,7 +40,10 @@ export type ActivityOption = {
   priceAkz: number | null;
 };
 
-/** Matriz de actividades por serviço (fallback offline / API indisponível). */
+/**
+ * Matriz de actividades por serviço (fallback offline / API indisponível).
+ * Corresponde à unidade Sagrada Família (Gika) — usada também como padrão.
+ */
 export const ACTIVITY_OFFERINGS_BY_SERVICE: Record<string, ActivityOption[]> = {
   Creche: [
     { name: "Ginástica", pricing: "INCLUDED", priceAkz: null },
@@ -72,6 +75,51 @@ export const ACTIVITY_OFFERINGS_BY_SERVICE: Record<string, ActivityOption[]> = {
   ],
 };
 
+/** Matriz específica da unidade Patriota (Alfa Kids) — inclui Natação. */
+export const ACTIVITY_OFFERINGS_PATRIOTA: Record<string, ActivityOption[]> = {
+  Creche: [
+    { name: "Ginástica", pricing: "INCLUDED", priceAkz: null },
+    { name: "Inglês", pricing: "INCLUDED", priceAkz: null },
+    { name: "Música", pricing: "INCLUDED", priceAkz: null },
+    { name: "Dança Criativa", pricing: "PAID", priceAkz: 30000 },
+    { name: "Natação", pricing: "PAID", priceAkz: 30000 },
+  ],
+  "Pré-Escolar": [
+    { name: "Ginástica", pricing: "INCLUDED", priceAkz: null },
+    { name: "Inglês", pricing: "INCLUDED", priceAkz: null },
+    { name: "Música", pricing: "INCLUDED", priceAkz: null },
+    { name: "Jiu-Jitsu", pricing: "PAID", priceAkz: 30000 },
+    { name: "Ballet", pricing: "PAID", priceAkz: 30000 },
+    { name: "Xadrez", pricing: "PAID", priceAkz: 25000 },
+    { name: "Natação", pricing: "PAID", priceAkz: 30000 },
+  ],
+  ATL: [
+    { name: "Ginástica", pricing: "INCLUDED", priceAkz: null },
+    { name: "Inglês", pricing: "INCLUDED", priceAkz: null },
+    { name: "Música", pricing: "INCLUDED", priceAkz: null },
+    { name: "Jiu-Jitsu", pricing: "PAID", priceAkz: 30000 },
+    { name: "Ballet", pricing: "PAID", priceAkz: 30000 },
+    { name: "Xadrez", pricing: "PAID", priceAkz: 25000 },
+    { name: "Natação", pricing: "PAID", priceAkz: 30000 },
+  ],
+  "1.º Ciclo": [
+    { name: "Jiu-Jitsu", pricing: "PAID", priceAkz: 40000 },
+    { name: "Ballet", pricing: "PAID", priceAkz: 40000 },
+    { name: "Xadrez", pricing: "PAID", priceAkz: 30000 },
+    { name: "Artes", pricing: "PAID", priceAkz: 45000 },
+  ],
+};
+
+/** Matriz de actividades por unidade (fallback offline). */
+export const ACTIVITY_OFFERINGS_BY_UNIT: Record<
+  string,
+  Record<string, ActivityOption[]>
+> = {
+  Gika: ACTIVITY_OFFERINGS_BY_SERVICE,
+  "Sagrada Família": ACTIVITY_OFFERINGS_BY_SERVICE,
+  Patriota: ACTIVITY_OFFERINGS_PATRIOTA,
+};
+
 /** @deprecated Use ACTIVITY_OFFERINGS_BY_SERVICE / activitiesForService */
 export const FALLBACK_ACTIVITIES = [
   "Ginástica",
@@ -84,8 +132,20 @@ export const FALLBACK_ACTIVITIES = [
   "Artes",
 ];
 
-export function activitiesForService(serviceName: string): ActivityOption[] {
-  return ACTIVITY_OFFERINGS_BY_SERVICE[serviceName.trim()] ?? [];
+/**
+ * Todas as actividades do serviço (incluídas e opcionais/pagas).
+ * Se indicada a unidade, usa a matriz específica dessa unidade (fallback → padrão/Gika).
+ */
+export function activitiesForService(
+  serviceName: string,
+  unitName?: string,
+): ActivityOption[] {
+  const service = serviceName.trim();
+  const unit = unitName?.trim();
+  const unitMatrix = unit ? ACTIVITY_OFFERINGS_BY_UNIT[unit] : undefined;
+  return (
+    unitMatrix?.[service] ?? ACTIVITY_OFFERINGS_BY_SERVICE[service] ?? []
+  );
 }
 
 export function formatActivityPriceLabel(option: ActivityOption): string {
@@ -98,11 +158,14 @@ export function formatActivityPriceLabel(option: ActivityOption): string {
   return `AKZ ${formatted}`;
 }
 
+/** Mantém apenas actividades opcionais (pagas) ainda disponíveis no serviço. */
 export function filterActivitiesForService(
   selected: string[],
   options: ActivityOption[],
 ): string[] {
-  const allowed = new Set(options.map((o) => o.name));
+  const allowed = new Set(
+    options.filter((o) => o.pricing === "PAID").map((o) => o.name),
+  );
   return selected.filter((name) => allowed.has(name));
 }
 

@@ -5,7 +5,6 @@ import { Plus, Trash2 } from "lucide-react";
 import {
   emptyEmergency,
   emptyGuardian,
-  formatActivityPriceLabel,
   type ActivityOption,
   type EmergencyForm,
   type GuardianForm,
@@ -100,7 +99,7 @@ export function GuardiansEditor({
                   onChange={(e) => update(index, { phone: e.target.value })}
                 />
               </Field>
-              <Field label="Telefone alternactivo">
+              <Field label="Telefone alternativo">
                 <Input
                   value={guardian.altPhone}
                   onChange={(e) => update(index, { altPhone: e.target.value })}
@@ -254,8 +253,8 @@ export function ActivitiesPicker({
       <CardContent>
         <p className="mb-4 text-sm text-muted-foreground">
           {serviceName
-            ? `Actividades disponíveis para ${serviceName}. Seleccione as pretendidas (opcional).`
-            : "Seleccione as actividades pretendidas (opcional)."}
+            ? `Actividades de ${serviceName}. As incluídas na mensalidade aparecem como referência; seleccione apenas as opcionais pretendidas.`
+            : "As incluídas na mensalidade aparecem como referência; seleccione apenas as opcionais pretendidas."}
         </p>
         {options.length === 0 ? (
           <p className="text-sm text-muted-foreground">
@@ -264,37 +263,38 @@ export function ActivitiesPicker({
         ) : (
           <div className="grid gap-2 sm:grid-cols-2">
             {options.map((option) => {
-              const checked = value.includes(option.name);
-              const priceLabel = formatActivityPriceLabel(option);
+              const included = option.pricing === "INCLUDED";
+              const checked = !included && value.includes(option.name);
               return (
                 <label
                   key={option.name}
-                  className={`flex cursor-pointer items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm transition ${
-                    checked
-                      ? "border-primary bg-primary/5"
-                      : "hover:bg-muted/40"
+                  className={`flex items-center gap-3 rounded-lg border px-3 py-2 text-sm transition ${
+                    included
+                      ? "cursor-default border-border/50 bg-muted/30 text-muted-foreground"
+                      : checked
+                        ? "cursor-pointer border-primary bg-primary/5"
+                        : "cursor-pointer hover:bg-muted/40"
                   }`}
                 >
-                  <span className="flex items-center gap-3">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4"
-                      checked={checked}
-                      onChange={() => toggle(option.name)}
-                    />
-                    <span>{option.name}</span>
-                  </span>
-                  {priceLabel && (
-                    <span
-                      className={`shrink-0 text-xs font-medium ${
-                        option.pricing === "INCLUDED"
-                          ? "text-green"
-                          : "text-muted-foreground"
-                      }`}
-                    >
-                      {priceLabel}
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4"
+                    checked={checked}
+                    disabled={included}
+                    onChange={() => {
+                      if (!included) toggle(option.name);
+                    }}
+                  />
+                  <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                    <span className={included ? "opacity-80" : undefined}>
+                      {option.name}
                     </span>
-                  )}
+                    {included ? (
+                      <span className="shrink-0 text-xs font-medium text-muted-foreground">
+                        Incluído
+                      </span>
+                    ) : null}
+                  </span>
                 </label>
               );
             })}

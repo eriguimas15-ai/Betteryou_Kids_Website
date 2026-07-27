@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,96 +8,167 @@ import { Play, Image as ImageIcon, Calendar, Users, Maximize2 } from "lucide-rea
 import heroImage from "@/assets/hero-classroom.jpg";
 import natureImage from "@/assets/nature-play.jpg";
 import creativeImage from "@/assets/creative-activities.jpg";
+import { getPublicGallery, uploadPublicUrl } from "@/lib/api";
+
+type GalleryMediaItem = {
+  id: string | number;
+  type: "image" | "video";
+  src: string;
+  title: string;
+  description: string;
+  category: string;
+  categoryLabel: string;
+  date: string;
+};
+
+const DEFAULT_MEDIA_ITEMS: GalleryMediaItem[] = [
+  {
+    id: 1,
+    type: "image",
+    src: heroImage,
+    title: "Sala de Aula Moderna",
+    description: "Ambiente acolhedor e estimulante para a aprendizagem",
+    category: "facilities",
+    categoryLabel: "Instalações",
+    date: "Dezembro 2024",
+  },
+  {
+    id: 2,
+    type: "image",
+    src: natureImage,
+    title: "Actividades na Natureza",
+    description: "Crianças explorando e aprendendo ao ar livre",
+    category: "activities",
+    categoryLabel: "Actividades",
+    date: "Novembro 2024",
+  },
+  {
+    id: 3,
+    type: "image",
+    src: creativeImage,
+    title: "Arte e Criatividade",
+    description: "Desenvolvendo a expressão artística das crianças",
+    category: "activities",
+    categoryLabel: "Actividades",
+    date: "Outubro 2024",
+  },
+  {
+    id: 4,
+    type: "video",
+    src: heroImage,
+    title: "Um Dia na Betteryou Kids",
+    description: "Vídeo mostrando a rotina diária das crianças",
+    category: "events",
+    categoryLabel: "Eventos",
+    date: "Setembro 2024",
+  },
+  {
+    id: 5,
+    type: "image",
+    src: natureImage,
+    title: "Jardim Sensorial",
+    description: "Espaço dedicado à exploração dos sentidos",
+    category: "facilities",
+    categoryLabel: "Instalações",
+    date: "Agosto 2024",
+  },
+  {
+    id: 6,
+    type: "image",
+    src: creativeImage,
+    title: "Festival de Música",
+    description: "Apresentação musical das crianças",
+    category: "events",
+    categoryLabel: "Eventos",
+    date: "Julho 2024",
+  },
+];
+
+const CATEGORY_COLORS = ["blue", "green", "pink", "accent"];
 
 const Gallery = () => {
-  const [selectedMedia, setSelectedMedia] = useState<any>(null);
+  const [selectedMedia, setSelectedMedia] = useState<GalleryMediaItem | null>(
+    null,
+  );
   const [activeFilter, setActiveFilter] = useState("all");
+  const [mediaItems, setMediaItems] =
+    useState<GalleryMediaItem[]>(DEFAULT_MEDIA_ITEMS);
 
-  const mediaItems = [
-    {
-      id: 1,
-      type: "image",
-      src: heroImage,
-      title: "Sala de Aula Moderna",
-      description: "Ambiente acolhedor e estimulante para o aprendizado",
-      category: "facilities",
-      date: "Dezembro 2024"
-    },
-    {
-      id: 2,
-      type: "image",
-      src: natureImage,
-      title: "Actividades na Natureza",
-      description: "Crianças explorando e aprendendo ao ar livre",
-      category: "activities",
-      date: "Novembro 2024"
-    },
-    {
-      id: 3,
-      type: "image",
-      src: creativeImage,
-      title: "Arte e Criatividade",
-      description: "Desenvolvendo a expressão artística das crianças",
-      category: "activities",
-      date: "Outubro 2024"
-    },
-    {
-      id: 4,
-      type: "video",
-      src: heroImage, // Placeholder for video thumbnail
-      title: "Um Dia na Betteryou Kids",
-      description: "Vídeo mostrando a rotina diária das crianças",
-      category: "events",
-      date: "Setembro 2024"
-    },
-    {
-      id: 5,
-      type: "image",
-      src: natureImage,
-      title: "Jardim Sensorial",
-      description: "Espaço dedicado à exploração dos sentidos",
-      category: "facilities",
-      date: "Agosto 2024"
-    },
-    {
-      id: 6,
-      type: "image",
-      src: creativeImage,
-      title: "Festival de Música",
-      description: "Apresentação musical das crianças",
-      category: "events",
-      date: "Julho 2024"
+  useEffect(() => {
+    let cancelled = false;
+    getPublicGallery()
+      .then((albums) => {
+        if (cancelled) return;
+        const items: GalleryMediaItem[] = [];
+        for (const album of albums) {
+          for (const item of album.items) {
+            if (!item.media?.filePath) continue;
+            items.push({
+              id: item.id,
+              type: "image",
+              src: uploadPublicUrl(item.media.filePath),
+              title: item.title || album.title,
+              description: item.caption || item.media.altText || album.title,
+              category: album.slug,
+              categoryLabel: album.title,
+              date: "",
+            });
+          }
+        }
+        if (items.length > 0) setMediaItems(items);
+      })
+      .catch(() => {
+        // Mantém a galeria hardcoded como fallback.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const categoryColorMap = useMemo(() => {
+    const map = new Map<string, string>();
+    let index = 0;
+    for (const item of mediaItems) {
+      if (!map.has(item.category)) {
+        map.set(item.category, CATEGORY_COLORS[index % CATEGORY_COLORS.length]);
+        index += 1;
+      }
     }
-  ];
+    return map;
+  }, [mediaItems]);
 
-  const filters = [
-    { id: "all", label: "Todos", count: mediaItems.length },
-    { id: "facilities", label: "Instalações", count: mediaItems.filter(item => item.category === "facilities").length },
-    { id: "activities", label: "Actividades", count: mediaItems.filter(item => item.category === "activities").length },
-    { id: "events", label: "Eventos", count: mediaItems.filter(item => item.category === "events").length }
-  ];
-
-  const filteredItems = activeFilter === "all" 
-    ? mediaItems 
-    : mediaItems.filter(item => item.category === activeFilter);
-
-  const getCategoryColor = (category: string) => {
-    switch (category) {
-      case "facilities": return "blue";
-      case "activities": return "green";
-      case "events": return "pink";
-      default: return "accent";
+  const categoryLabelMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const item of mediaItems) {
+      if (!map.has(item.category)) map.set(item.category, item.categoryLabel);
     }
-  };
+    return map;
+  }, [mediaItems]);
 
-  const getCategoryLabel = (category: string) => {
-    switch (category) {
-      case "facilities": return "Instalações";
-      case "activities": return "Actividades";
-      case "events": return "Eventos";
-      default: return "Outros";
+  const filters = useMemo(() => {
+    const base = [
+      { id: "all", label: "Todos", count: mediaItems.length },
+    ];
+    for (const [category, label] of categoryLabelMap.entries()) {
+      base.push({
+        id: category,
+        label,
+        count: mediaItems.filter((item) => item.category === category).length,
+      });
     }
-  };
+    return base;
+  }, [mediaItems, categoryLabelMap]);
+
+  const filteredItems =
+    activeFilter === "all"
+      ? mediaItems
+      : mediaItems.filter((item) => item.category === activeFilter);
+
+  const getCategoryColor = (category: string) =>
+    categoryColorMap.get(category) || "accent";
+
+  const getCategoryLabel = (category: string) =>
+    categoryLabelMap.get(category) || "Outros";
 
   return (
     <section id="gallery" className="pt-32 pb-20 bg-gradient-to-b from-white to-muted/30">
@@ -184,8 +255,12 @@ const Gallery = () => {
               <CardContent className="p-4">
                 <div className="flex items-center justify-between text-sm text-muted-foreground">
                   <div className="flex items-center">
-                    <Calendar className="h-4 w-4 mr-1" />
-                    {item.date}
+                    {item.date && (
+                      <>
+                        <Calendar className="h-4 w-4 mr-1" />
+                        {item.date}
+                      </>
+                    )}
                   </div>
                   <div className="flex items-center">
                     {item.type === "video" ? (
@@ -209,7 +284,7 @@ const Gallery = () => {
             </h3>
             <p className="text-white/90 mb-8 max-w-2xl mx-auto">
               Agende uma visita para conhecer pessoalmente nossas instalações, 
-              conversar com nossa equipe e ver as crianças em acção.
+              conversar com nossa equipa e ver as crianças em acção.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button 
@@ -261,10 +336,12 @@ const Gallery = () => {
                 <p className="text-muted-foreground mt-2 leading-relaxed">
                   {selectedMedia.description}
                 </p>
-                <div className="flex items-center mt-4 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4 mr-1" />
-                  {selectedMedia.date}
-                </div>
+                {selectedMedia.date && (
+                  <div className="flex items-center mt-4 text-sm text-muted-foreground">
+                    <Calendar className="h-4 w-4 mr-1" />
+                    {selectedMedia.date}
+                  </div>
+                )}
               </div>
             </>
           )}

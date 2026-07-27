@@ -1,4 +1,12 @@
-import { PrismaClient, Role, ContentStatus, JobStatus } from '@prisma/client';
+import {
+  PrismaClient,
+  Role,
+  ContentStatus,
+  JobStatus,
+  EventType,
+  FeeKind,
+  FeeProgram,
+} from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
@@ -98,15 +106,28 @@ async function main() {
       name: 'Administrador',
       modules: [
         'dashboard',
+        'painel',
+        'portal',
         'inscricoes',
         'renovacoes',
         'ficha',
         'espera',
         'salas',
         'turmas',
+        'presencas',
+        'academico',
+        'curriculo',
+        'nee',
+        'comunicados',
+        'eventos',
+        'financeiro',
+        'relatorios',
         'actividades',
         'emprego',
         'conteudo',
+        'unidades',
+        'auditoria',
+        'backups',
         'acessos',
       ],
     },
@@ -115,34 +136,72 @@ async function main() {
       name: 'Direcção',
       modules: [
         'dashboard',
+        'painel',
+        'portal',
         'inscricoes',
         'renovacoes',
         'ficha',
         'espera',
         'salas',
         'turmas',
+        'presencas',
+        'academico',
+        'curriculo',
+        'nee',
+        'comunicados',
+        'eventos',
+        'financeiro',
+        'relatorios',
         'actividades',
         'emprego',
         'conteudo',
+        'unidades',
+        'auditoria',
       ],
     },
     {
       systemKey: 'COMUNICACAO',
       name: 'Comunicação',
-      modules: ['inscricoes', 'emprego', 'conteudo'],
+      modules: [
+        'inscricoes',
+        'comunicados',
+        'eventos',
+        'emprego',
+        'conteudo',
+      ],
     },
     {
       systemKey: 'COORDENACAO',
-      name: 'Coordinação',
+      name: 'Coordenação',
       modules: [
         'dashboard',
+        'portal',
         'inscricoes',
         'renovacoes',
         'ficha',
         'espera',
         'salas',
         'turmas',
+        'presencas',
+        'academico',
+        'curriculo',
+        'nee',
+        'comunicados',
+        'eventos',
         'actividades',
+        'relatorios',
+      ],
+    },
+    {
+      systemKey: 'PROFESSOR',
+      name: 'Professor(a)',
+      modules: [
+        'dashboard',
+        'presencas',
+        'academico',
+        'curriculo',
+        'nee',
+        'comunicados',
       ],
     },
   ];
@@ -206,18 +265,37 @@ async function main() {
     create: { label: '2026/2027', active: true },
   });
 
+  // Unidade canónica: Sagrada Família (legado "Gika").
+  const legacyGika = await prisma.unit.findUnique({ where: { name: 'Gika' } });
+  if (legacyGika) {
+    await prisma.unit.update({
+      where: { id: legacyGika.id },
+      data: {
+        name: 'Sagrada Família',
+        address: 'Av. Cmte. Gika 150, Sagrada Família, Luanda',
+        active: true,
+      },
+    });
+  }
+
   const gika = await prisma.unit.upsert({
-    where: { name: 'Gika' },
-    update: {},
+    where: { name: 'Sagrada Família' },
+    update: {
+      address: 'Av. Cmte. Gika 150, Sagrada Família, Luanda',
+      active: true,
+    },
     create: {
-      name: 'Gika',
-      address: 'Av. Cmte. Gika 150, Luanda',
+      name: 'Sagrada Família',
+      address: 'Av. Cmte. Gika 150, Sagrada Família, Luanda',
     },
   });
 
   const patriota = await prisma.unit.upsert({
     where: { name: 'Patriota' },
-    update: {},
+    update: {
+      address: 'Rua Urbanização Harmonia, Patriota',
+      active: true,
+    },
     create: {
       name: 'Patriota',
       address: 'Rua Urbanização Harmonia, Patriota',
@@ -591,7 +669,7 @@ async function main() {
       {
         authorName: 'Maria Silva',
         text: 'A BetterYou Kids transformou a vida do meu filho. Aprende brincando e chega sempre a casa feliz!',
-        unitName: 'Gika',
+        unitName: 'Sagrada Família',
         featured: true,
         status: ContentStatus.PUBLICADO,
         sortOrder: 1,
@@ -607,6 +685,26 @@ async function main() {
     ],
   });
 
+  // Álbuns de galeria (categorias) — criados como rascunho para a Comunicação
+  // preencher com imagens. O site público mantém o fallback até publicarem.
+  const galleryAlbums = [
+    { title: 'Instalações', slug: 'instalacoes', sortOrder: 1 },
+    { title: 'Actividades', slug: 'actividades', sortOrder: 2 },
+    { title: 'Eventos', slug: 'eventos', sortOrder: 3 },
+  ];
+  for (const album of galleryAlbums) {
+    await prisma.galleryAlbum.upsert({
+      where: { slug: album.slug },
+      update: { title: album.title, sortOrder: album.sortOrder },
+      create: {
+        title: album.title,
+        slug: album.slug,
+        sortOrder: album.sortOrder,
+        status: ContentStatus.RASCUNHO,
+      },
+    });
+  }
+
   const activities = [
     { name: 'Ginástica', category: 'Desportiva', sortOrder: 1 },
     { name: 'Inglês', category: 'Educativa', sortOrder: 2 },
@@ -616,6 +714,7 @@ async function main() {
     { name: 'Xadrez', category: 'Educativa', sortOrder: 6 },
     { name: 'Dança Criativa', category: 'Artística', sortOrder: 7 },
     { name: 'Artes', category: 'Artística', sortOrder: 8 },
+    { name: 'Natação', category: 'Desportiva', sortOrder: 9 },
   ];
 
   const deprecatedActivities = [
@@ -653,13 +752,15 @@ async function main() {
   }
 
   type PricingKind = 'INCLUDED' | 'PAID';
+  // unit: undefined = global (fallback para todas as unidades); 'Gika' | 'Patriota' = específico.
   const serviceActivityMatrix: Array<{
     activity: string;
     service: string;
     pricing: PricingKind;
     priceAkz?: number;
+    unit?: 'Gika' | 'Patriota';
   }> = [
-    // Creche / Pré-Escolar / ATL — incluídas
+    // Incluídas (Ginástica/Inglês/Música) — globais: iguais em todas as unidades.
     { activity: 'Ginástica', service: 'Creche', pricing: 'INCLUDED' },
     { activity: 'Inglês', service: 'Creche', pricing: 'INCLUDED' },
     { activity: 'Música', service: 'Creche', pricing: 'INCLUDED' },
@@ -669,66 +770,39 @@ async function main() {
     { activity: 'Ginástica', service: 'ATL', pricing: 'INCLUDED' },
     { activity: 'Inglês', service: 'ATL', pricing: 'INCLUDED' },
     { activity: 'Música', service: 'ATL', pricing: 'INCLUDED' },
-    // Creche — opcional paga
-    {
-      activity: 'Dança Criativa',
-      service: 'Creche',
-      pricing: 'PAID',
-      priceAkz: 40000,
-    },
-    // Pré-Escolar / ATL — opcionais pagas
-    {
-      activity: 'Jiu-Jitsu',
-      service: 'Pré-Escolar',
-      pricing: 'PAID',
-      priceAkz: 40000,
-    },
-    {
-      activity: 'Ballet',
-      service: 'Pré-Escolar',
-      pricing: 'PAID',
-      priceAkz: 40000,
-    },
-    {
-      activity: 'Xadrez',
-      service: 'Pré-Escolar',
-      pricing: 'PAID',
-      priceAkz: 30000,
-    },
-    {
-      activity: 'Jiu-Jitsu',
-      service: 'ATL',
-      pricing: 'PAID',
-      priceAkz: 40000,
-    },
-    { activity: 'Ballet', service: 'ATL', pricing: 'PAID', priceAkz: 40000 },
-    { activity: 'Xadrez', service: 'ATL', pricing: 'PAID', priceAkz: 30000 },
-    // 1.º Ciclo — extracurriculares opcionais
-    {
-      activity: 'Jiu-Jitsu',
-      service: '1.º Ciclo',
-      pricing: 'PAID',
-      priceAkz: 40000,
-    },
-    {
-      activity: 'Ballet',
-      service: '1.º Ciclo',
-      pricing: 'PAID',
-      priceAkz: 40000,
-    },
-    {
-      activity: 'Xadrez',
-      service: '1.º Ciclo',
-      pricing: 'PAID',
-      priceAkz: 30000,
-    },
-    {
-      activity: 'Artes',
-      service: '1.º Ciclo',
-      pricing: 'PAID',
-      priceAkz: 45000,
-    },
+
+    // ── Sagrada Família (Gika) — opcionais pagas ──
+    { activity: 'Dança Criativa', service: 'Creche', pricing: 'PAID', priceAkz: 40000, unit: 'Gika' },
+    { activity: 'Jiu-Jitsu', service: 'Pré-Escolar', pricing: 'PAID', priceAkz: 40000, unit: 'Gika' },
+    { activity: 'Ballet', service: 'Pré-Escolar', pricing: 'PAID', priceAkz: 40000, unit: 'Gika' },
+    { activity: 'Xadrez', service: 'Pré-Escolar', pricing: 'PAID', priceAkz: 30000, unit: 'Gika' },
+    { activity: 'Jiu-Jitsu', service: 'ATL', pricing: 'PAID', priceAkz: 40000, unit: 'Gika' },
+    { activity: 'Ballet', service: 'ATL', pricing: 'PAID', priceAkz: 40000, unit: 'Gika' },
+    { activity: 'Xadrez', service: 'ATL', pricing: 'PAID', priceAkz: 30000, unit: 'Gika' },
+
+    // ── Patriota (Alfa Kids) — opcionais pagas + Natação ──
+    { activity: 'Dança Criativa', service: 'Creche', pricing: 'PAID', priceAkz: 30000, unit: 'Patriota' },
+    { activity: 'Natação', service: 'Creche', pricing: 'PAID', priceAkz: 30000, unit: 'Patriota' },
+    { activity: 'Jiu-Jitsu', service: 'Pré-Escolar', pricing: 'PAID', priceAkz: 30000, unit: 'Patriota' },
+    { activity: 'Ballet', service: 'Pré-Escolar', pricing: 'PAID', priceAkz: 30000, unit: 'Patriota' },
+    { activity: 'Xadrez', service: 'Pré-Escolar', pricing: 'PAID', priceAkz: 25000, unit: 'Patriota' },
+    { activity: 'Natação', service: 'Pré-Escolar', pricing: 'PAID', priceAkz: 30000, unit: 'Patriota' },
+    { activity: 'Jiu-Jitsu', service: 'ATL', pricing: 'PAID', priceAkz: 30000, unit: 'Patriota' },
+    { activity: 'Ballet', service: 'ATL', pricing: 'PAID', priceAkz: 30000, unit: 'Patriota' },
+    { activity: 'Xadrez', service: 'ATL', pricing: 'PAID', priceAkz: 25000, unit: 'Patriota' },
+    { activity: 'Natação', service: 'ATL', pricing: 'PAID', priceAkz: 30000, unit: 'Patriota' },
+
+    // 1.º Ciclo — extracurriculares opcionais (global; valores comuns)
+    { activity: 'Jiu-Jitsu', service: '1.º Ciclo', pricing: 'PAID', priceAkz: 40000 },
+    { activity: 'Ballet', service: '1.º Ciclo', pricing: 'PAID', priceAkz: 40000 },
+    { activity: 'Xadrez', service: '1.º Ciclo', pricing: 'PAID', priceAkz: 30000 },
+    { activity: 'Artes', service: '1.º Ciclo', pricing: 'PAID', priceAkz: 45000 },
   ];
+
+  const activityUnitIds: Record<'Gika' | 'Patriota', string> = {
+    Gika: gika.id,
+    Patriota: patriota.id,
+  };
 
   await prisma.activityServiceOffering.deleteMany({});
   for (const row of serviceActivityMatrix) {
@@ -737,6 +811,7 @@ async function main() {
     if (!activityId || !serviceId) continue;
     await prisma.activityServiceOffering.create({
       data: {
+        unitId: row.unit ? activityUnitIds[row.unit] : null,
         activityId,
         serviceId,
         pricing: row.pricing,
@@ -744,6 +819,593 @@ async function main() {
         active: true,
       },
     });
+  }
+
+  // Eventos / festas de exemplo (um publicado, um rascunho)
+  const eventSeeds = [
+    {
+      id: 'seed-event-festa-verao',
+      title: 'Festa de Verão BetterYou Kids',
+      description:
+        'Uma tarde de jogos, música e diversão para toda a família. Insufláveis, pinturas faciais e lanche partilhado. Traga a sua criança!',
+      type: EventType.FESTA,
+      status: ContentStatus.PUBLICADO,
+      startAt: new Date(Date.now() + 21 * 24 * 60 * 60 * 1000),
+      location: 'Unidade Gika — Pátio exterior',
+      unitId: gika.id,
+      capacity: 80,
+      priceAkz: 0,
+      publishedAt: new Date(),
+    },
+    {
+      id: 'seed-event-workshop-pais',
+      title: 'Workshop para Pais: Rotinas Positivas',
+      description:
+        'Sessão prática sobre rotinas e disciplina positiva, orientada pela nossa equipa pedagógica.',
+      type: EventType.WORKSHOP,
+      status: ContentStatus.RASCUNHO,
+      startAt: new Date(Date.now() + 35 * 24 * 60 * 60 * 1000),
+      location: 'Unidade Gika — Sala polivalente',
+      unitId: gika.id,
+      capacity: 30,
+      priceAkz: null,
+      publishedAt: null,
+    },
+  ];
+
+  for (const ev of eventSeeds) {
+    await prisma.event.upsert({
+      where: { id: ev.id },
+      update: {
+        title: ev.title,
+        description: ev.description,
+        type: ev.type,
+        status: ev.status,
+        startAt: ev.startAt,
+        location: ev.location,
+        unitId: ev.unitId,
+        capacity: ev.capacity,
+        priceAkz: ev.priceAkz,
+        publishedAt: ev.publishedAt,
+      },
+      create: {
+        id: ev.id,
+        title: ev.title,
+        description: ev.description,
+        type: ev.type,
+        status: ev.status,
+        startAt: ev.startAt,
+        location: ev.location,
+        unitId: ev.unitId,
+        capacity: ev.capacity,
+        priceAkz: ev.priceAkz,
+        authorId: admin.id,
+        publishedAt: ev.publishedAt,
+      },
+    });
+  }
+
+  // ─────────────── Financeiro: preçário real BY Kids 2026/2027 ───────────────
+  // Fonte: «BY Kids - Serviços e Preços 2026-2027» e «Condições Financeiras
+  // 1.º Ciclo 2026-27». Valores em AKZ (Kwanza).
+  type FeePlanSeed = {
+    id: string;
+    name: string;
+    kind: FeeKind;
+    /** Nome da unidade (Gika = Sagrada Família, Patriota). undefined = Gika. */
+    unit?: string | null;
+    service: string | null;
+    program: FeeProgram | null;
+    amountAkz: number;
+    description?: string;
+  };
+
+  const feePlanSeeds: FeePlanSeed[] = [
+    // Propinas mensais — Creche
+    {
+      id: 'seed-feeplan-creche-meio',
+      name: 'Creche — Meio tempo (sem alimentação)',
+      kind: FeeKind.PROPINA,
+      service: 'Creche',
+      program: FeeProgram.MEIO_TEMPO,
+      amountAkz: 235000,
+      description: '3h/dia, sem refeições.',
+    },
+    {
+      id: 'seed-feeplan-creche-meio-alim',
+      name: 'Creche — Meio tempo (com alimentação)',
+      kind: FeeKind.PROPINA,
+      service: 'Creche',
+      program: FeeProgram.MEIO_TEMPO_ALIMENTACAO,
+      amountAkz: 255000,
+      description: 'Inclui 2 refeições diárias.',
+    },
+    {
+      id: 'seed-feeplan-creche-inteiro',
+      name: 'Creche — Tempo inteiro',
+      kind: FeeKind.PROPINA,
+      service: 'Creche',
+      program: FeeProgram.TEMPO_INTEIRO,
+      amountAkz: 295000,
+      description: 'Inclui 3 refeições diárias.',
+    },
+    // Propinas mensais — Pré-Escolar
+    {
+      id: 'seed-feeplan-pre-meio',
+      name: 'Pré-Escolar — Meio tempo (sem alimentação)',
+      kind: FeeKind.PROPINA,
+      service: 'Pré-Escolar',
+      program: FeeProgram.MEIO_TEMPO,
+      amountAkz: 235000,
+      description: '3h/dia, sem refeições.',
+    },
+    {
+      id: 'seed-feeplan-pre-meio-alim',
+      name: 'Pré-Escolar — Meio tempo (com alimentação)',
+      kind: FeeKind.PROPINA,
+      service: 'Pré-Escolar',
+      program: FeeProgram.MEIO_TEMPO_ALIMENTACAO,
+      amountAkz: 235000,
+      description: 'Inclui 2 refeições diárias.',
+    },
+    {
+      id: 'seed-feeplan-pre-inteiro',
+      name: 'Pré-Escolar — Tempo inteiro',
+      kind: FeeKind.PROPINA,
+      service: 'Pré-Escolar',
+      program: FeeProgram.TEMPO_INTEIRO,
+      amountAkz: 280000,
+      description: 'Inclui 3 refeições diárias.',
+    },
+    // Propinas mensais — ATL
+    {
+      id: 'seed-feeplan-atl-meio',
+      name: 'ATL — Meio tempo (sem alimentação)',
+      kind: FeeKind.PROPINA,
+      service: 'ATL',
+      program: FeeProgram.MEIO_TEMPO,
+      amountAkz: 235000,
+      description: '3h/dia, sem refeições.',
+    },
+    {
+      id: 'seed-feeplan-atl-meio-alim',
+      name: 'ATL — Meio tempo (com alimentação)',
+      kind: FeeKind.PROPINA,
+      service: 'ATL',
+      program: FeeProgram.MEIO_TEMPO_ALIMENTACAO,
+      amountAkz: 280000,
+      description: 'Inclui 2 refeições diárias.',
+    },
+    {
+      id: 'seed-feeplan-atl-inteiro',
+      name: 'ATL — Tempo inteiro',
+      kind: FeeKind.PROPINA,
+      service: 'ATL',
+      program: FeeProgram.TEMPO_INTEIRO,
+      amountAkz: 280000,
+      description: 'Inclui 3 refeições diárias.',
+    },
+    // Propinas mensais — 1.º Ciclo (1.º Ano)
+    {
+      id: 'seed-feeplan-ciclo-regular',
+      name: '1.º Ciclo — Programa Regular',
+      kind: FeeKind.PROPINA,
+      service: '1.º Ciclo',
+      program: FeeProgram.REGULAR,
+      amountAkz: 405000,
+      description: 'Horário 07:30–12:45.',
+    },
+    {
+      id: 'seed-feeplan-ciclo-integral',
+      name: '1.º Ciclo — Programa Integral',
+      kind: FeeKind.PROPINA,
+      service: '1.º Ciclo',
+      program: FeeProgram.INTEGRAL,
+      amountAkz: 575000,
+      description: 'Horário 07:30–16:30, inclui almoço, lanche e pós-aulas.',
+    },
+    // Taxas anuais — Creche / Pré-Escolar / ATL (gerais)
+    {
+      id: 'seed-taxa-admissao',
+      name: 'Admissão e Recursos Anuais',
+      kind: FeeKind.TAXA,
+      service: null,
+      program: null,
+      amountAkz: 205000,
+      description: 'Inclui o seguro escolar. Creche/Pré-Escolar/ATL.',
+    },
+    {
+      id: 'seed-taxa-inscricao',
+      name: 'Inscrição (novos alunos)',
+      kind: FeeKind.TAXA,
+      service: null,
+      program: null,
+      amountAkz: 360000,
+      description: 'Para novos alunos, no acto da matrícula.',
+    },
+    {
+      id: 'seed-taxa-renovacao',
+      name: 'Renovação de matrícula',
+      kind: FeeKind.TAXA,
+      service: null,
+      program: null,
+      amountAkz: 350000,
+      description: 'Anualmente, no início de cada ano lectivo.',
+    },
+    // Taxas anuais — 1.º Ciclo
+    {
+      id: 'seed-taxa-ciclo-matricula',
+      name: 'Matrícula + Kit pedagógico (1.º Ciclo)',
+      kind: FeeKind.TAXA,
+      service: '1.º Ciclo',
+      program: null,
+      amountAkz: 205000,
+      description:
+        'Seguro, cartão do aluno, manuais, cadernos, papéis e impressões.',
+    },
+    {
+      id: 'seed-taxa-ciclo-renovacao',
+      name: 'Renovação (1.º Ciclo)',
+      kind: FeeKind.TAXA,
+      service: '1.º Ciclo',
+      program: null,
+      amountAkz: 250000,
+      description: 'Renovação de matrícula do 1.º Ciclo.',
+    },
+    // Produtos / serviços adicionais
+    {
+      id: 'seed-prod-alimentacao',
+      name: 'Alimentação diária (avulsa)',
+      kind: FeeKind.PRODUTO,
+      service: null,
+      program: null,
+      amountAkz: 20000,
+    },
+    {
+      id: 'seed-prod-prolongamento',
+      name: 'Prolongamento de horário (17h30–19h00, por hora)',
+      kind: FeeKind.PRODUTO,
+      service: null,
+      program: null,
+      amountAkz: 15000,
+      description: 'Inclui 2.º lanche.',
+    },
+    {
+      id: 'seed-prod-uniforme-bibe',
+      name: 'Uniforme — Bibe/Bata',
+      kind: FeeKind.PRODUTO,
+      service: null,
+      program: null,
+      amountAkz: 30000,
+    },
+    {
+      id: 'seed-prod-uniforme-polo',
+      name: 'Uniforme — Polo',
+      kind: FeeKind.PRODUTO,
+      service: null,
+      program: null,
+      amountAkz: 25000,
+    },
+    {
+      id: 'seed-prod-uniforme-tshirt',
+      name: 'Uniforme — T-shirt',
+      kind: FeeKind.PRODUTO,
+      service: null,
+      program: null,
+      amountAkz: 20000,
+    },
+    {
+      id: 'seed-prod-uniforme-calcao',
+      name: 'Uniforme — Calção',
+      kind: FeeKind.PRODUTO,
+      service: null,
+      program: null,
+      amountAkz: 18000,
+    },
+    {
+      id: 'seed-prod-uniforme-casaco',
+      name: 'Uniforme — Casaco',
+      kind: FeeKind.PRODUTO,
+      service: null,
+      program: null,
+      amountAkz: 30000,
+    },
+    {
+      id: 'seed-prod-uniforme-chapeu',
+      name: 'Uniforme — Chapéu',
+      kind: FeeKind.PRODUTO,
+      service: null,
+      program: null,
+      amountAkz: 20000,
+    },
+    {
+      id: 'seed-prod-uniforme-lencois',
+      name: 'Uniforme — Lençóis para catre',
+      kind: FeeKind.PRODUTO,
+      service: null,
+      program: null,
+      amountAkz: 27000,
+    },
+
+    // ───────────── Patriota (Alfa Kids) 2026/2027 ─────────────
+    // Propinas mensais — Creche
+    {
+      id: 'seed-feeplan-pat-creche-meio',
+      name: 'Creche — Meio tempo (sem alimentação)',
+      kind: FeeKind.PROPINA,
+      unit: 'Patriota',
+      service: 'Creche',
+      program: FeeProgram.MEIO_TEMPO,
+      amountAkz: 210000,
+      description: '3h/dia, sem refeições.',
+    },
+    {
+      id: 'seed-feeplan-pat-creche-inteiro',
+      name: 'Creche — Tempo inteiro',
+      kind: FeeKind.PROPINA,
+      unit: 'Patriota',
+      service: 'Creche',
+      program: FeeProgram.TEMPO_INTEIRO,
+      amountAkz: 220000,
+      description: 'Inclui 3 refeições diárias.',
+    },
+    // Propinas mensais — Pré-Escolar
+    {
+      id: 'seed-feeplan-pat-pre-meio',
+      name: 'Pré-Escolar — Meio tempo (sem alimentação)',
+      kind: FeeKind.PROPINA,
+      unit: 'Patriota',
+      service: 'Pré-Escolar',
+      program: FeeProgram.MEIO_TEMPO,
+      amountAkz: 210000,
+      description: '3h/dia, sem refeições.',
+    },
+    {
+      id: 'seed-feeplan-pat-pre-inteiro',
+      name: 'Pré-Escolar — Tempo inteiro',
+      kind: FeeKind.PROPINA,
+      unit: 'Patriota',
+      service: 'Pré-Escolar',
+      program: FeeProgram.TEMPO_INTEIRO,
+      amountAkz: 210000,
+      description: 'Inclui 3 refeições diárias.',
+    },
+    // Propina mensal — ATL (programa único, com 2 refeições)
+    {
+      id: 'seed-feeplan-pat-atl',
+      name: 'ATL',
+      kind: FeeKind.PROPINA,
+      unit: 'Patriota',
+      service: 'ATL',
+      program: FeeProgram.TEMPO_INTEIRO,
+      amountAkz: 210000,
+      description: 'Inclui 2 refeições diárias (almoço e lanche da tarde).',
+    },
+    // Taxas anuais — Patriota (Creche/Pré-Escolar)
+    {
+      id: 'seed-taxa-pat-admissao',
+      name: 'Admissão e Recursos Anuais',
+      kind: FeeKind.TAXA,
+      unit: 'Patriota',
+      service: null,
+      program: null,
+      amountAkz: 120000,
+      description: 'Inclui o seguro escolar. Creche/Pré-Escolar.',
+    },
+    {
+      id: 'seed-taxa-pat-inscricao',
+      name: 'Inscrição (novos alunos)',
+      kind: FeeKind.TAXA,
+      unit: 'Patriota',
+      service: null,
+      program: null,
+      amountAkz: 265000,
+      description: 'Para novos alunos, no acto da matrícula.',
+    },
+    {
+      id: 'seed-taxa-pat-renovacao',
+      name: 'Renovação de matrícula',
+      kind: FeeKind.TAXA,
+      unit: 'Patriota',
+      service: null,
+      program: null,
+      amountAkz: 255000,
+      description: 'Anualmente, no início de cada ano lectivo.',
+    },
+    // Produtos / adicionais — Patriota
+    {
+      id: 'seed-prod-pat-prolongamento',
+      name: 'Prolongamento de horário (17h30–18h00, por hora)',
+      kind: FeeKind.PRODUTO,
+      unit: 'Patriota',
+      service: null,
+      program: null,
+      amountAkz: 8000,
+      description: 'Inclui suplemento (2.º lanche).',
+    },
+    {
+      id: 'seed-prod-pat-insc-actividades',
+      name: 'Inscrição de actividades extracurriculares',
+      kind: FeeKind.PRODUTO,
+      unit: 'Patriota',
+      service: null,
+      program: null,
+      amountAkz: 10000,
+    },
+    {
+      id: 'seed-prod-pat-uniforme-bibe',
+      name: 'Uniforme — Bibe/Bata',
+      kind: FeeKind.PRODUTO,
+      unit: 'Patriota',
+      service: null,
+      program: null,
+      amountAkz: 25000,
+    },
+    {
+      id: 'seed-prod-pat-uniforme-polo',
+      name: 'Uniforme — Polo',
+      kind: FeeKind.PRODUTO,
+      unit: 'Patriota',
+      service: null,
+      program: null,
+      amountAkz: 19000,
+    },
+    {
+      id: 'seed-prod-pat-uniforme-tshirt',
+      name: 'Uniforme — T-shirt (Ginástica)',
+      kind: FeeKind.PRODUTO,
+      unit: 'Patriota',
+      service: null,
+      program: null,
+      amountAkz: 16000,
+    },
+    {
+      id: 'seed-prod-pat-uniforme-calcao',
+      name: 'Uniforme — Calção (Ginástica)',
+      kind: FeeKind.PRODUTO,
+      unit: 'Patriota',
+      service: null,
+      program: null,
+      amountAkz: 15000,
+    },
+    {
+      id: 'seed-prod-pat-uniforme-casaco',
+      name: 'Uniforme — Casaco',
+      kind: FeeKind.PRODUTO,
+      unit: 'Patriota',
+      service: null,
+      program: null,
+      amountAkz: 30000,
+    },
+    {
+      id: 'seed-prod-pat-uniforme-chapeu',
+      name: 'Uniforme — Chapéu',
+      kind: FeeKind.PRODUTO,
+      unit: 'Patriota',
+      service: null,
+      program: null,
+      amountAkz: 16000,
+    },
+    {
+      id: 'seed-prod-pat-uniforme-lencois',
+      name: 'Uniforme — Lençóis para catre',
+      kind: FeeKind.PRODUTO,
+      unit: 'Patriota',
+      service: null,
+      program: null,
+      amountAkz: 18000,
+    },
+  ];
+
+  // Unidades para o preçário (undefined = Gika/Sagrada Família).
+  const feePlanUnitMap: Record<string, string> = {
+    Gika: gika.id,
+    Patriota: patriota.id,
+  };
+
+  // Remover planos-exemplo antigos antes de recriar o preçário real.
+  await prisma.feePlan.deleteMany({
+    where: { id: { startsWith: 'seed-feeplan-' } },
+  });
+
+  for (const plan of feePlanSeeds) {
+    const serviceId = plan.service ? (services[plan.service] ?? null) : null;
+    const unitId =
+      plan.unit === undefined
+        ? gika.id
+        : plan.unit
+          ? (feePlanUnitMap[plan.unit] ?? null)
+          : null;
+    const academicYearId = plan.kind === FeeKind.PRODUTO ? null : year.id;
+    await prisma.feePlan.upsert({
+      where: { id: plan.id },
+      update: {
+        name: plan.name,
+        kind: plan.kind,
+        amountAkz: plan.amountAkz,
+        unitId,
+        serviceId,
+        program: plan.program,
+        academicYearId,
+        description: plan.description ?? null,
+        active: true,
+      },
+      create: {
+        id: plan.id,
+        name: plan.name,
+        kind: plan.kind,
+        amountAkz: plan.amountAkz,
+        unitId,
+        serviceId,
+        program: plan.program,
+        academicYearId,
+        description: plan.description ?? null,
+        active: true,
+      },
+    });
+  }
+
+  await prisma.platformSettings.upsert({
+    where: { id: 'default' },
+    update: {},
+    create: {
+      id: 'default',
+      waitlistResponseHours: 48,
+      waitlistDeadlineEnabled: true,
+    },
+  });
+
+  // Amostra leve de PEI (só se já existir um aluno na base).
+  const sampleStudent = await prisma.student.findFirst({
+    orderBy: { createdAt: 'asc' },
+    include: { neeProfile: true },
+  });
+  if (sampleStudent) {
+    const profile =
+      sampleStudent.neeProfile ??
+      (await prisma.neeProfile.create({
+        data: {
+          studentId: sampleStudent.id,
+          active: true,
+          diagnosisSummary:
+            'Necessidades Educativas Especiais — acompanhamento pedagógico diferenciado.',
+          notes: 'Perfil de exemplo criado pelo seed.',
+          identifiedAt: new Date(),
+        },
+      }));
+
+    const existingPei = await prisma.peiPlan.findFirst({
+      where: { studentId: sampleStudent.id },
+    });
+    if (!existingPei) {
+      await prisma.peiPlan.create({
+        data: {
+          studentId: sampleStudent.id,
+          neeProfileId: profile.id,
+          academicYearId: sampleStudent.academicYearId,
+          status: 'ACTIVO',
+          title: 'PEI de exemplo',
+          objectives:
+            'Promover a autonomia nas rotinas da sala e reforçar a comunicação expressiva.',
+          strategies:
+            'Actividades em pequeno grupo, reforço positivo e adaptações no ritmo das tarefas.',
+          supports: 'Apoio da educadora e articulação com a coordenação pedagógica.',
+          guardianSummary:
+            'O plano acompanha o desenvolvimento da criança com estratégias adaptadas na sala.',
+          responsibleTeacher: 'Educadora de referência',
+          reviewDate: new Date(new Date().getFullYear(), 11, 15),
+          createdById: admin.id,
+          reviews: {
+            create: {
+              date: new Date(),
+              notes:
+                'Primeira revisão de acompanhamento — progressos positivos na participação.',
+              authorId: admin.id,
+            },
+          },
+        },
+      });
+    }
   }
 
   console.log('Seed concluído.');

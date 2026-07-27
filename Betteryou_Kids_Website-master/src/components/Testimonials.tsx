@@ -7,6 +7,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Star, Quote, Users, Award, Heart } from "lucide-react";
+import {
+  getPublicTestimonials,
+  type PublicTestimonial,
+} from "@/lib/api";
 
 interface Testimonial {
   name: string;
@@ -24,7 +28,7 @@ const defaultTestimonials: Testimonial[] = [
     {
       name: "Maria Santos",
       role: "Mãe da Sofia (4 anos)",
-      content: "A Betteryou Kids transformou a vida da nossa família. A Sofia desenvolveu não apenas academicamente, mas também emocionalmente. O carinho e dedicação da equipe são únicos.",
+      content: "A Betteryou Kids transformou a vida da nossa família. A Sofia desenvolveu não apenas academicamente, mas também emocionalmente. O carinho e dedicação da equipa são únicos.",
       rating: 5,
       service: "Pré-Escolar",
       image: "👩🏽",
@@ -42,7 +46,7 @@ const defaultTestimonials: Testimonial[] = [
     {
       name: "Ana Costa",
       role: "Mãe da Beatriz (2 anos)",
-      content: "Como mãe de primeira viagem, estava muito nervosa em deixar a Beatriz numa creche. A equipe da Betteryou Kids me tranquilizou desde o primeiro dia. É realmente uma extensão da nossa família.",
+      content: "Como mãe de primeira viagem, estava muito nervosa em deixar a Beatriz numa creche. A equipa da Betteryou Kids me tranquilizou desde o primeiro dia. É realmente uma extensão da nossa família.",
       rating: 5,
       service: "Creche",
       image: "👩🏾",
@@ -69,13 +73,41 @@ const defaultTestimonials: Testimonial[] = [
     {
       name: "Ricardo Silva",
       role: "Pai da Mariana (3 anos)",
-      content: "A abordagem pedagógica baseada no amor, natureza e criatividade é exatamente o que procurávamos. A Mariana está sempre animada e aprendendo coisas novas.",
+      content: "A abordagem pedagógica baseada no amor, natureza e criatividade é exactamente o que procurávamos. A Mariana está sempre animada e aprendendo coisas novas.",
       rating: 5,
       service: "Pré-Escolar",
       image: "👨🏻",
       highlight: "Metodologia inovadora"
     }
   ];
+
+function mapPublicTestimonial(item: PublicTestimonial): Testimonial {
+  const unit = item.unitName?.trim() || "";
+  return {
+    name: item.authorName,
+    role: unit ? `Unidade ${unit}` : "Família Betteryou Kids",
+    content: item.text,
+    rating: 5,
+    service: unit || "Betteryou Kids",
+    image: "🧡",
+    highlight: item.featured ? "Depoimento em destaque" : "Depoimento da família",
+  };
+}
+
+function loadLocalFallback(): Testimonial[] {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      const parsed = JSON.parse(stored) as Testimonial[];
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    } catch {
+      // ignore invalid storage data
+    }
+  }
+  return defaultTestimonials;
+}
 
 const Testimonials = () => {
   const stats = [
@@ -138,17 +170,23 @@ const Testimonials = () => {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored) as Testimonial[];
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setTestimonialsState(parsed);
+    let cancelled = false;
+    getPublicTestimonials()
+      .then((items) => {
+        if (cancelled) return;
+        if (Array.isArray(items) && items.length > 0) {
+          setTestimonialsState(items.map(mapPublicTestimonial));
+          return;
         }
-      } catch {
-        // ignore invalid storage data
-      }
-    }
+        setTestimonialsState(loadLocalFallback());
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTestimonialsState(loadLocalFallback());
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const saveTestimonials = (items: Testimonial[]) => {
@@ -181,7 +219,7 @@ const Testimonials = () => {
 
     saveTestimonials([testimonial, ...testimonialsState]);
     setNewEntry({ name: "", role: "", service: "", content: "" });
-    setMessage("Depoimento enviado! Obrigado por compartilhar a sua experiência.");
+    setMessage("Depoimento enviado! Obrigado por partilhar a sua experiência.");
   };
 
   return (

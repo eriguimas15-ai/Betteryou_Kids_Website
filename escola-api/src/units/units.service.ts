@@ -1,9 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../common/audit/audit.service';
+
+/** Nomes alternativos aceites na resolução por nome (legado Gika ↔ Sagrada Família). */
+export function unitNameCandidates(name: string): string[] {
+  const trimmed = name.trim();
+  if (!trimmed) return [];
+  const aliases = new Set<string>([trimmed]);
+  if (/^gika$/i.test(trimmed) || /sagrada\s*fam[ií]lia/i.test(trimmed)) {
+    aliases.add('Gika');
+    aliases.add('Sagrada Família');
+  }
+  return [...aliases];
+}
 
 @Injectable()
 export class UnitsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   findAll(activeOnly = true) {
     return this.prisma.unit.findMany({
@@ -30,15 +46,41 @@ export class UnitsService {
     return unit;
   }
 
-  create(data: { name: string; address?: string }) {
-    return this.prisma.unit.create({ data });
+  /** Resolve unidade activa pelo nome (aceita aliases legados). */
+  async findActiveByName(name: string) {
+    const candidates = unitNameCandidates(name);
+    if (!candidates.length) return null;
+    return this.prisma.unit.findFirst({
+      where: { active: true, name: { in: candidates } },
+    });
   }
 
-  update(
+  async create(data: { name: string; address?: string }, actorId?: string) {
+    const unit = await this.prisma.unit.create({ data });
+    await this.audit.record({
+      userId: actorId,
+      action: 'UNIT_CREATED',
+      entity: 'Unit',
+      entityId: unit.id,
+      metadata: { name: unit.name },
+    });
+    return unit;
+  }
+
+  async update(
     id: string,
     data: { name?: string; address?: string; active?: boolean },
+    actorId?: string,
   ) {
-    return this.prisma.unit.update({ where: { id }, data });
+    const unit = await this.prisma.unit.update({ where: { id }, data });
+    await this.audit.record({
+      userId: actorId,
+      action: 'UNIT_UPDATED',
+      entity: 'Unit',
+      entityId: id,
+      metadata: { changes: { ...data } },
+    });
+    return unit;
   }
 
   async setService(unitId: string, serviceId: string, active: boolean) {

@@ -4,51 +4,126 @@ import { ArrowRight, ChevronLeft, ChevronRight, Heart, Star } from "lucide-react
 import heroImage from "@/assets/hero-classroom.jpg";
 import natureImage from "@/assets/nature-play.jpg";
 import creativeImage from "@/assets/creative-activities.jpg";
+import { getPublicCmsPage } from "@/lib/api";
+
+type HeroSlide = {
+  image: string;
+  title: string;
+  highlight: string;
+  subtitle: string;
+  description: string;
+  color1: string;
+  color2: string;
+  bgGradient: string;
+  /** Cores personalizadas via CMS (hex). Vazio = usa a cor predefinida. */
+  titleColorHex?: string;
+  descriptionColorHex?: string;
+};
+
+const DEFAULT_CTA = "Agendar Visita";
+
+const DEFAULT_SLIDES: HeroSlide[] = [
+  {
+    image: heroImage,
+    title: "O amor guia,",
+    highlight: "a natureza inspira",
+    subtitle: "e a criatividade transforma",
+    description:
+      "Na Betteryou Kids, proporcionamos uma educação afectiva e inovadora que prepara seus filhos para um futuro brilhante através de metodologias únicas baseadas no amor, conexão com a natureza e estímulo à criatividade.",
+    color1: "text-pink-400",
+    color2: "text-green-400",
+    bgGradient: "from-pink-100/90 via-purple-50/80 to-green-100/70",
+  },
+  {
+    image: natureImage,
+    title: "Explorando juntos",
+    highlight: "o mundo natural",
+    subtitle: "com curiosidade e alegria",
+    description:
+      "Oferecemos experiências únicas de aprendizagem ao ar livre, onde cada criança descobre seu potencial através da conexão profunda com a natureza e actividades que estimulam todos os sentidos.",
+    color1: "text-green-500",
+    color2: "text-blue-400",
+    bgGradient: "from-green-100/90 via-blue-50/80 to-yellow-100/70",
+  },
+  {
+    image: creativeImage,
+    title: "Desenvolvendo talentos",
+    highlight: "através da arte",
+    subtitle: "e expressão criativa",
+    description:
+      "Nossas actividades artísticas e culturais permitem que cada criança explore sua criatividade única, desenvolvendo habilidades essenciais para a vida através de música, dança, arte e muito mais.",
+    color1: "text-purple-500",
+    color2: "text-orange-400",
+    bgGradient: "from-purple-100/90 via-pink-50/80 to-orange-100/70",
+  },
+];
+
+function sectionValue(
+  sections: Array<{ key: string; value: string }> | undefined,
+  key: string,
+): string {
+  return sections?.find((s) => s.key === key)?.value?.trim() || "";
+}
 
 const ModernSlider = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
+  const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES);
+  const [ctaPrimary, setCtaPrimary] = useState(DEFAULT_CTA);
 
-  const slides = [
-    {
-      image: heroImage,
-      title: "O amor guia,",
-      highlight: "a natureza inspira",
-      subtitle: "e a criatividade transforma",
-      description: "Na Betteryou Kids, proporcionamos uma educação afetiva e inovadora que prepara seus filhos para um futuro brilhante através de metodologias únicas baseadas no amor, conexão com a natureza e estímulo à criatividade.",
-      color1: "text-pink-400",
-      color2: "text-green-400",
-      bgGradient: "from-pink-100/90 via-purple-50/80 to-green-100/70"
-    },
-    {
-      image: natureImage,
-      title: "Explorando juntos",
-      highlight: "o mundo natural",
-      subtitle: "com curiosidade e alegria",
-      description: "Oferecemos experiências únicas de aprendizado ao ar livre, onde cada criança descobre seu potencial através da conexão profunda com a natureza e actividades que estimulam todos os sentidos.",
-      color1: "text-green-500",
-      color2: "text-blue-400",
-      bgGradient: "from-green-100/90 via-blue-50/80 to-yellow-100/70"
-    },
-    {
-      image: creativeImage,
-      title: "Desenvolvendo talentos",
-      highlight: "através da arte",
-      subtitle: "e expressão criativa",
-      description: "Nossas actividades artísticas e culturais permitem que cada criança explore sua criatividade única, desenvolvendo habilidades essenciais para a vida através de música, dança, arte e muito mais.",
-      color1: "text-purple-500",
-      color2: "text-orange-400",
-      bgGradient: "from-purple-100/90 via-pink-50/80 to-orange-100/70"
-    }
-  ];
+  useEffect(() => {
+    let cancelled = false;
+    getPublicCmsPage("home")
+      .then((page) => {
+        if (cancelled) return;
+        const heroTitle = sectionValue(page.sections, "hero_title");
+        const heroSubtitle = sectionValue(page.sections, "hero_subtitle");
+        const titleColor = sectionValue(page.sections, "title_color");
+        const subtitleColor = sectionValue(page.sections, "subtitle_color");
+        const cta = sectionValue(page.sections, "cta_primary");
+
+        if (
+          !heroTitle &&
+          !heroSubtitle &&
+          !cta &&
+          !titleColor &&
+          !subtitleColor
+        )
+          return;
+
+        setSlides((prev) => {
+          const next = [...prev];
+          const first = { ...next[0] };
+          if (heroTitle) {
+            first.title = heroTitle;
+            first.highlight = "";
+            first.subtitle = "";
+          }
+          if (heroSubtitle) {
+            first.description = heroSubtitle;
+          }
+          if (titleColor) first.titleColorHex = titleColor;
+          if (subtitleColor) first.descriptionColorHex = subtitleColor;
+          next[0] = first;
+          return next;
+        });
+        if (cta) setCtaPrimary(cta);
+      })
+      .catch(() => {
+        // Mantém o conteúdo hardcoded se a API falhar.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isAutoPlay) return;
-    
+
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
     }, 5000);
-    
+
     return () => clearInterval(timer);
   }, [isAutoPlay, slides.length]);
 
@@ -171,22 +246,33 @@ const ModernSlider = () => {
           <div className="text-gray-800 mb-10">
             {/* Título com cores alegres */}
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 leading-tight">
-              <span className="block animate-fade-in-up drop-shadow-sm">
+              <span
+                className="block animate-fade-in-up drop-shadow-sm"
+                style={{ color: slides[currentSlide].titleColorHex }}
+              >
                 {slides[currentSlide].title}
               </span>
-              <span className={`block ${slides[currentSlide].color1} drop-shadow-md animate-fade-in-up`} 
-                    style={{animationDelay: '0.2s'}}>
-                {slides[currentSlide].highlight}
-              </span>
-              <span className={`block ${slides[currentSlide].color2} drop-shadow-md animate-fade-in-up`}
-                    style={{animationDelay: '0.4s'}}>
-                {slides[currentSlide].subtitle}
-              </span>
+              {slides[currentSlide].highlight ? (
+                <span
+                  className={`block ${slides[currentSlide].color1} drop-shadow-md animate-fade-in-up`}
+                  style={{ animationDelay: "0.2s" }}
+                >
+                  {slides[currentSlide].highlight}
+                </span>
+              ) : null}
+              {slides[currentSlide].subtitle ? (
+                <span
+                  className={`block ${slides[currentSlide].color2} drop-shadow-md animate-fade-in-up`}
+                  style={{ animationDelay: "0.4s" }}
+                >
+                  {slides[currentSlide].subtitle}
+                </span>
+              ) : null}
             </h1>
 
             {/* Descrição clara e acolhedora */}
             <p className="text-lg md:text-xl lg:text-2xl text-gray-700 max-w-4xl leading-relaxed mb-12 animate-fade-in-up bg-white/40 backdrop-blur-sm p-6 rounded-2xl shadow-sm"
-               style={{animationDelay: '0.6s'}}>
+               style={{animationDelay: '0.6s', color: slides[currentSlide].descriptionColorHex}}>
               {slides[currentSlide].description}
             </p>
           </div>
@@ -195,7 +281,7 @@ const ModernSlider = () => {
           <div className="flex flex-col sm:flex-row gap-4 animate-fade-in-up" style={{animationDelay: '0.8s'}}>
             <Link to="/contato" className="group px-8 py-4 bg-gradient-to-r from-pink-400 to-purple-500 text-white font-semibold text-lg rounded-full hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl inline-flex items-center justify-center">
               <Heart className="mr-2 h-5 w-5 group-hover:animate-pulse" fill="currentColor" />
-              Agendar Visita
+              {ctaPrimary}
               <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
             </Link>
             
@@ -228,7 +314,7 @@ const ModernSlider = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
           50% { transform: translateY(-15px) rotate(5deg); }

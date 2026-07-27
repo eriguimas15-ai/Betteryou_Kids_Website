@@ -71,7 +71,7 @@ const About = () => {
       icon: Clock,
       title: "ATL",
       age: "3-10 anos",
-      description: "Actividades complementares que ampliam o aprendizado e o convívio social",
+      description: "Actividades complementares que ampliam a aprendizagem e o convívio social",
       color: "purple"
     },
     {
@@ -205,7 +205,7 @@ const About = () => {
                 <h3 className="text-2xl font-bold text-primary">Missão</h3>
               </div>
               <p className="text-muted-foreground leading-relaxed">
-                Proporcionar uma educação afetiva e inovadora que desenvolva o 
+                Proporcionar uma educação afectiva e inovadora que desenvolva o 
                 potencial único de cada criança, preparando-as para serem cidadãos 
                 conscientes, criativos e felizes.
               </p>
@@ -224,7 +224,7 @@ const About = () => {
               <p className="text-muted-foreground leading-relaxed">
                 Ser referência em educação infantil premium em Angola e no mundo 
                 lusófono, reconhecida pela excelência e inovação em metodologias 
-                pedagógicas afetivas.
+                pedagógicas afectivas.
               </p>
             </CardContent>
           </Card>
@@ -239,7 +239,7 @@ const About = () => {
                 <h3 className="text-2xl font-bold text-accent">Abordagem</h3>
               </div>
               <p className="text-muted-foreground leading-relaxed">
-                Nossa abordagem pedagógica integra afeto, natureza e criatividade, 
+                Nossa abordagem pedagógica integra afecto, natureza e criatividade, 
                 proporcionando um ambiente onde cada criança pode crescer de forma 
                 saudável e equilibrada.
               </p>

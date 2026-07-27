@@ -240,6 +240,13 @@ export class RoomsController {
 
   @ApiBearerAuth()
   @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO)
+  @Get(':id/dependencies')
+  dependencies(@Param('id') id: string) {
+    return this.rooms.getDependencies(id);
+  }
+
+  @ApiBearerAuth()
+  @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO)
   @Patch(':id/active')
   setActive(@Param('id') id: string, @Body() dto: SetRoomActiveDto) {
     return this.rooms.update(id, { active: dto.active });

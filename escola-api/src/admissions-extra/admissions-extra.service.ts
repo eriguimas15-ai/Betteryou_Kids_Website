@@ -13,6 +13,7 @@ import {
   type GuardianInput,
   type EmergencyInput,
 } from '../common/person-form';
+import { unitNameCandidates } from '../units/units.service';
 
 @Injectable()
 export class RenewalsService {
@@ -30,6 +31,20 @@ export class RenewalsService {
         service: true,
         academicYear: true,
         room: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  listMine(user: { email: string }) {
+    return this.prisma.renewal.findMany({
+      where: { guardianEmail: user.email.toLowerCase() },
+      include: {
+        unit: true,
+        service: true,
+        academicYear: true,
+        room: true,
+        student: { select: { id: true, profileStatus: true } },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -75,8 +90,11 @@ export class RenewalsService {
     });
     if (!year) throw new BadRequestException('Ano letivo inválido');
 
-    const unit = await this.prisma.unit.findUnique({
-      where: { name: data.unitName },
+    const unit = await this.prisma.unit.findFirst({
+      where: {
+        active: true,
+        name: { in: unitNameCandidates(data.unitName) },
+      },
     });
     if (!unit) throw new BadRequestException('Unidade inválida');
 
@@ -149,7 +167,11 @@ export class RenewalsService {
     const renewal = await this.prisma.renewal.findUnique({ where: { id } });
     if (!renewal) throw new NotFoundException('Renovação não encontrada');
 
-    if (status === RenewalStatus.CONFIRMADA && renewal.roomId) {
+    const wasConfirmed = renewal.status === RenewalStatus.CONFIRMADA;
+    const willConfirm = status === RenewalStatus.CONFIRMADA;
+
+    // Só valida vagas na transição efectiva para CONFIRMADA.
+    if (willConfirm && !wasConfirmed && renewal.roomId) {
       const room = await this.prisma.room.findUnique({
         where: { id: renewal.roomId },
       });
@@ -158,24 +180,37 @@ export class RenewalsService {
           'Não há vagas nesta sala para confirmar a renovação',
         );
       }
-      await this.prisma.room.update({
-        where: { id: renewal.roomId },
-        data: { renewalReserved: { increment: 1 } },
-      });
     }
 
-    const updated = await this.prisma.renewal.update({
-      where: { id },
-      data: { status },
-      include: {
-        unit: true,
-        service: true,
-        academicYear: true,
-        room: true,
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (renewal.roomId) {
+        if (willConfirm && !wasConfirmed) {
+          // Reserva a vaga ao confirmar (evita duplo incremento em reconfirmação).
+          await tx.room.update({
+            where: { id: renewal.roomId },
+            data: { renewalReserved: { increment: 1 } },
+          });
+        } else if (!willConfirm && wasConfirmed) {
+          // Liberta a reserva ao sair de CONFIRMADA (ex.: cancelamento).
+          await tx.room.update({
+            where: { id: renewal.roomId },
+            data: { renewalReserved: { decrement: 1 } },
+          });
+        }
+      }
+      return tx.renewal.update({
+        where: { id },
+        data: { status },
+        include: {
+          unit: true,
+          service: true,
+          academicYear: true,
+          room: true,
+        },
+      });
     });
 
-    if (status === RenewalStatus.CONFIRMADA) {
+    if (willConfirm && !wasConfirmed) {
       await this.students.createFromRenewal(updated.id);
     }
 
@@ -183,7 +218,18 @@ export class RenewalsService {
   }
 
   async remove(id: string) {
-    await this.prisma.renewal.delete({ where: { id } });
+    const renewal = await this.prisma.renewal.findUnique({ where: { id } });
+    if (!renewal) throw new NotFoundException('Renovação não encontrada');
+    await this.prisma.$transaction(async (tx) => {
+      // Liberta a reserva de vaga se a renovação estava confirmada.
+      if (renewal.status === RenewalStatus.CONFIRMADA && renewal.roomId) {
+        await tx.room.update({
+          where: { id: renewal.roomId },
+          data: { renewalReserved: { decrement: 1 } },
+        });
+      }
+      await tx.renewal.delete({ where: { id } });
+    });
     return { ok: true };
   }
 }
@@ -277,43 +323,76 @@ export class ActivitiesService {
 
   private includeServices = {
     services: {
-      include: { service: { select: { id: true, name: true } } },
+      include: {
+        service: { select: { id: true, name: true } },
+        unit: { select: { id: true, name: true } },
+      },
       orderBy: { service: { name: 'asc' as const } },
     },
   };
 
-  listPublic(serviceName?: string) {
+  async listPublic(serviceName?: string, unitId?: string, unitName?: string) {
     const trimmed = serviceName?.trim();
     if (trimmed) {
-      return this.prisma.activityServiceOffering
-        .findMany({
-          where: {
-            active: true,
-            activity: { active: true },
-            service: { name: trimmed, active: true },
-          },
-          include: {
-            activity: true,
-            service: { select: { id: true, name: true } },
-          },
-          orderBy: [
-            { activity: { sortOrder: 'asc' } },
-            { activity: { name: 'asc' } },
-          ],
-        })
-        .then((rows) =>
-          rows.map((row) => ({
-            id: row.activity.id,
-            name: row.activity.name,
-            category: row.activity.category,
-            description: row.activity.description,
-            active: row.activity.active,
-            sortOrder: row.activity.sortOrder,
-            pricing: row.pricing,
-            priceAkz: row.priceAkz,
-            serviceName: row.service.name,
-          })),
-        );
+      // Resolve a unidade pedida (id directo ou por nome). Null = global.
+      let resolvedUnitId = unitId?.trim() || null;
+      const unitNameTrimmed = unitName?.trim();
+      if (!resolvedUnitId && unitNameTrimmed) {
+        const unit = await this.prisma.unit.findFirst({
+          where: { name: { in: unitNameCandidates(unitNameTrimmed) } },
+          select: { id: true },
+        });
+        resolvedUnitId = unit?.id ?? null;
+      }
+
+      // Ofertas específicas da unidade + globais (unitId null) como fallback.
+      const rows = await this.prisma.activityServiceOffering.findMany({
+        where: {
+          active: true,
+          activity: { active: true },
+          service: { name: trimmed, active: true },
+          OR: [{ unitId: resolvedUnitId }, { unitId: null }],
+        },
+        include: {
+          activity: true,
+          service: { select: { id: true, name: true } },
+        },
+        orderBy: [
+          { activity: { sortOrder: 'asc' } },
+          { activity: { name: 'asc' } },
+        ],
+      });
+
+      // Uma linha por actividade: prefere a específica da unidade, senão a global.
+      const byActivity = new Map<string, (typeof rows)[number]>();
+      for (const row of rows) {
+        const existing = byActivity.get(row.activityId);
+        if (!existing) {
+          byActivity.set(row.activityId, row);
+          continue;
+        }
+        if (row.unitId === resolvedUnitId && existing.unitId !== resolvedUnitId) {
+          byActivity.set(row.activityId, row);
+        }
+      }
+
+      return [...byActivity.values()]
+        .sort(
+          (a, b) =>
+            a.activity.sortOrder - b.activity.sortOrder ||
+            a.activity.name.localeCompare(b.activity.name),
+        )
+        .map((row) => ({
+          id: row.activity.id,
+          name: row.activity.name,
+          category: row.activity.category,
+          description: row.activity.description,
+          active: row.activity.active,
+          sortOrder: row.activity.sortOrder,
+          pricing: row.pricing,
+          priceAkz: row.priceAkz,
+          serviceName: row.service.name,
+        }));
     }
 
     return this.prisma.activityOffering.findMany({
@@ -337,6 +416,7 @@ export class ActivitiesService {
 
   private async normalizeServiceLinks(
     services: Array<{
+      unitId?: string | null;
       serviceId: string;
       pricing: ActivityPricing;
       priceAkz?: number | null;
@@ -351,7 +431,22 @@ export class ActivitiesService {
     if (found.length !== ids.length) {
       throw new BadRequestException('Um ou mais serviços são inválidos.');
     }
+    const unitIds = [
+      ...new Set(
+        services.map((s) => s.unitId?.trim()).filter((v): v is string => !!v),
+      ),
+    ];
+    if (unitIds.length) {
+      const foundUnits = await this.prisma.unit.findMany({
+        where: { id: { in: unitIds } },
+        select: { id: true },
+      });
+      if (foundUnits.length !== unitIds.length) {
+        throw new BadRequestException('Uma ou mais unidades são inválidas.');
+      }
+    }
     return services.map((s) => ({
+      unitId: s.unitId?.trim() || null,
       serviceId: s.serviceId.trim(),
       pricing: s.pricing,
       priceAkz:
@@ -371,6 +466,7 @@ export class ActivitiesService {
     active?: boolean;
     sortOrder?: number;
     services?: Array<{
+      unitId?: string | null;
       serviceId: string;
       pricing: ActivityPricing;
       priceAkz?: number | null;
@@ -409,6 +505,7 @@ export class ActivitiesService {
       active?: boolean;
       sortOrder?: number;
       services?: Array<{
+        unitId?: string | null;
         serviceId: string;
         pricing: ActivityPricing;
         priceAkz?: number | null;

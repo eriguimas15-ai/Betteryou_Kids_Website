@@ -19,7 +19,10 @@ import {
   MinLength,
 } from 'class-validator';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { UsersService } from './users.service';
+
+type RequestUser = { id: string; email: string; role: string };
 
 class CreateProfileDto {
   @IsString()
@@ -132,20 +135,24 @@ export class UsersController {
 
   @Roles(Role.ADMIN)
   @Post('profiles')
-  createProfile(@Body() dto: CreateProfileDto) {
-    return this.users.createProfile(dto);
+  createProfile(@Body() dto: CreateProfileDto, @CurrentUser() user: RequestUser) {
+    return this.users.createProfile(dto, user?.id);
   }
 
   @Roles(Role.ADMIN)
   @Patch('profiles/:id')
-  updateProfile(@Param('id') id: string, @Body() dto: UpdateProfileDto) {
-    return this.users.updateProfile(id, dto);
+  updateProfile(
+    @Param('id') id: string,
+    @Body() dto: UpdateProfileDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.users.updateProfile(id, dto, user?.id);
   }
 
   @Roles(Role.ADMIN)
   @Delete('profiles/:id')
-  deleteProfile(@Param('id') id: string) {
-    return this.users.deleteProfile(id);
+  deleteProfile(@Param('id') id: string, @CurrentUser() user: RequestUser) {
+    return this.users.deleteProfile(id, user?.id);
   }
 
   @Roles(Role.ADMIN)
@@ -156,13 +163,17 @@ export class UsersController {
 
   @Roles(Role.ADMIN)
   @Post()
-  create(@Body() dto: CreateUserDto) {
-    return this.users.createUser(dto);
+  create(@Body() dto: CreateUserDto, @CurrentUser() user: RequestUser) {
+    return this.users.createUser(dto, user?.id);
   }
 
   @Roles(Role.ADMIN)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateUserDto) {
-    return this.users.updateUser(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateUserDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.users.updateUser(id, dto, user?.id);
   }
 }

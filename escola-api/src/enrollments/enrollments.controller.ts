@@ -20,6 +20,7 @@ import { EnrollmentsService } from './enrollments.service';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 
 const docsDir = join(process.env.UPLOAD_DIR || './uploads', 'documents');
 if (!existsSync(docsDir)) mkdirSync(docsDir, { recursive: true });
@@ -43,10 +44,28 @@ export class EnrollmentsController {
   }
 
   @ApiBearerAuth()
+  @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO, Role.ENCARREGADO)
+  @Get('mine')
+  listMine(
+    @CurrentUser()
+    user: { id: string; email: string; role: string },
+  ) {
+    return this.enrollments.listMine(user);
+  }
+
+  @ApiBearerAuth()
   @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO)
   @Get('waitlist')
   waitlist() {
     return this.enrollments.listWaitlist();
+  }
+
+  /** Job/cron: processa prazos expirados, liberta reservas e avança a fila. */
+  @ApiBearerAuth()
+  @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO)
+  @Post('waitlist/process-expired')
+  processExpired() {
+    return this.enrollments.processExpiredWaitlist();
   }
 
   @ApiBearerAuth()
@@ -59,15 +78,21 @@ export class EnrollmentsController {
   @ApiBearerAuth()
   @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO)
   @Patch(':id/confirm')
-  confirm(@Param('id') id: string) {
-    return this.enrollments.confirm(id);
+  confirm(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; email: string; role: string },
+  ) {
+    return this.enrollments.confirm(id, user);
   }
 
   @ApiBearerAuth()
   @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO)
   @Patch(':id/reject')
-  reject(@Param('id') id: string) {
-    return this.enrollments.reject(id);
+  reject(
+    @Param('id') id: string,
+    @CurrentUser() user: { id: string; email: string; role: string },
+  ) {
+    return this.enrollments.reject(id, user);
   }
 
   @Public()
@@ -103,10 +128,20 @@ export class EnrollmentsController {
   }
 
   @ApiBearerAuth()
-  @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO, Role.COMUNICACAO)
+  @Roles(
+    Role.ADMIN,
+    Role.DIRECAO,
+    Role.COORDENACAO,
+    Role.COMUNICACAO,
+    Role.ENCARREGADO,
+  )
   @Get(':id/documents')
-  listDocuments(@Param('id') id: string) {
-    return this.enrollments.listDocuments(id);
+  listDocuments(
+    @Param('id') id: string,
+    @CurrentUser()
+    user: { id: string; email: string; role: string },
+  ) {
+    return this.enrollments.listDocumentsForUser(id, user);
   }
 
   @ApiBearerAuth()
@@ -127,9 +162,19 @@ export class EnrollmentsController {
   }
 
   @ApiBearerAuth()
-  @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO, Role.COMUNICACAO)
+  @Roles(
+    Role.ADMIN,
+    Role.DIRECAO,
+    Role.COORDENACAO,
+    Role.COMUNICACAO,
+    Role.ENCARREGADO,
+  )
   @Get(':id')
-  get(@Param('id') id: string) {
-    return this.enrollments.findOne(id);
+  get(
+    @Param('id') id: string,
+    @CurrentUser()
+    user: { id: string; email: string; role: string },
+  ) {
+    return this.enrollments.findOneForUser(id, user);
   }
 }

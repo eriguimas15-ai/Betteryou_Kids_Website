@@ -13,6 +13,9 @@ import { IsBoolean, IsEnum, IsOptional, IsString, MinLength } from 'class-valida
 import { UnitsService } from './units.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Public } from '../common/decorators/public.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
+
+type RequestUser = { id: string; email: string; role: string };
 
 class CreateUnitDto {
   @IsString()
@@ -66,15 +69,19 @@ export class UnitsController {
   @ApiBearerAuth()
   @Roles(Role.ADMIN, Role.DIRECAO)
   @Post()
-  create(@Body() dto: CreateUnitDto) {
-    return this.units.create(dto);
+  create(@Body() dto: CreateUnitDto, @CurrentUser() user: RequestUser) {
+    return this.units.create(dto, user?.id);
   }
 
   @ApiBearerAuth()
   @Roles(Role.ADMIN, Role.DIRECAO)
   @Patch(':id')
-  update(@Param('id') id: string, @Body() dto: UpdateUnitDto) {
-    return this.units.update(id, dto);
+  update(
+    @Param('id') id: string,
+    @Body() dto: UpdateUnitDto,
+    @CurrentUser() user: RequestUser,
+  ) {
+    return this.units.update(id, dto, user?.id);
   }
 
   @ApiBearerAuth()

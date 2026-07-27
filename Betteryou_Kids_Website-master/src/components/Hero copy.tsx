@@ -24,7 +24,7 @@ const Hero = () => {
       title: "Explorando juntos",
       highlight: "o mundo natural",
       subtitle: "com curiosidade e alegria",
-      description: "Oferecemos experiências únicas de aprendizado ao ar livre, onde cada criança descobre seu potencial através da conexão profunda com a natureza e actividades que estimulam todos os sentidos.",
+      description: "Oferecemos experiências únicas de aprendizagem ao ar livre, onde cada criança descobre seu potencial através da conexão profunda com a natureza e actividades que estimulam todos os sentidos.",
       highlightColor: "text-green",
       subtitleColor: "text-blue"
     },

@@ -143,7 +143,7 @@ const Activities = () => {
       capacity: 50,
       enrolled: 45,
       description: "Celebração da primavera com actividades ao ar livre",
-      instructor: "Equipe Completa",
+      instructor: "Equipa Completa",
       summary: "Um dia especial de conexão com a natureza! As crianças participaram de plantio, observação de insetos, jogos ecológicos e muito mais. Foi uma experiência enriquecedora para todos.",
       images: [natureImage, creativeImage],
       videos: ["festival1.mp4"]
@@ -171,7 +171,7 @@ const Activities = () => {
     },
     {
       title: "Olimpíadas Kids",
-      description: "Competições esportivas e recreativas que promovem o espírito de equipe.",
+      description: "Competições desportivas e recreativas que promovem o espírito de equipa.",
       date: "Março 2025",
       color: "blue"
     }
@@ -350,7 +350,7 @@ const Activities = () => {
               </div>
               <h4 className="font-semibold text-primary mb-2">Habilidades Sociais</h4>
               <p className="text-sm text-muted-foreground">
-                Fortalecimento das relações interpessoais e trabalho em equipe.
+                Fortalecimento das relações interpessoais e trabalho em equipa.
               </p>
             </div>
             <div className="p-6">

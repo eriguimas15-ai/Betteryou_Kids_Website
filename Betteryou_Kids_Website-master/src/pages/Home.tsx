@@ -1,14 +1,84 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Link } from "react-router-dom";
-import { Heart, Leaf, Sparkles, ArrowRight, Users, Award, Star, BookOpen, Palette, Music } from "lucide-react";
+import { Heart, Leaf, Sparkles, ArrowRight, Star, BookOpen, Palette, Music } from "lucide-react";
 import Hero from "@/components/Hero";
 import DynamicStats from "@/components/DynamicStats";
 import heroImage from "@/assets/hero-classroom.jpg";
 import natureImage from "@/assets/nature-play.jpg";
 import creativeImage from "@/assets/creative-activities.jpg";
+import {
+  getPublicCmsPage,
+  getPublicTestimonials,
+  type PublicTestimonial,
+} from "@/lib/api";
+
+const DEFAULT_HOME_TESTIMONIALS = [
+  {
+    name: "Maria Silva",
+    role: "Mãe do João",
+    text: "A Betteryou Kids transformou a vida do meu filho. Ele aprende brincando e sempre chega em casa feliz!",
+    rating: 5,
+  },
+  {
+    name: "Carlos Mendes",
+    role: "Pai da Ana",
+    text: "Excelente metodologia. Nossa filha desenvolveu muito a criatividade e as habilidades sociais.",
+    rating: 5,
+  },
+];
+
+const DEFAULT_CTA = "Agendar Visita";
+
+function mapHomeTestimonial(item: PublicTestimonial) {
+  return {
+    name: item.authorName,
+    role: item.unitName?.trim()
+      ? `Unidade ${item.unitName.trim()}`
+      : "Família Betteryou Kids",
+    text: item.text,
+    rating: 5,
+  };
+}
 
 const Home = () => {
+  const [testimonials, setTestimonials] = useState(DEFAULT_HOME_TESTIMONIALS);
+  const [ctaPrimary, setCtaPrimary] = useState(DEFAULT_CTA);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    getPublicCmsPage("home")
+      .then((page) => {
+        if (cancelled) return;
+        const cta = page.sections
+          ?.find((s) => s.key === "cta_primary")
+          ?.value?.trim();
+        if (cta) setCtaPrimary(cta);
+      })
+      .catch(() => {
+        // Mantém CTA hardcoded.
+      });
+
+    getPublicTestimonials()
+      .then((items) => {
+        if (cancelled) return;
+        if (Array.isArray(items) && items.length > 0) {
+          const featured = items.filter((t) => t.featured);
+          const source = featured.length > 0 ? featured : items;
+          setTestimonials(source.slice(0, 2).map(mapHomeTestimonial));
+        }
+      })
+      .catch(() => {
+        // Mantém depoimentos hardcoded.
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const features = [
     {
       icon: Heart,
@@ -19,7 +89,7 @@ const Home = () => {
     {
       icon: Leaf,
       title: "Conexão Natural",
-      description: "Aprendizado ao ar livre e sustentável",
+      description: "Aprendizagem ao ar livre e sustentável",
       color: "text-green"
     },
     {
@@ -70,23 +140,8 @@ const Home = () => {
     {
       title: "Festas e Eventos Infantis",
       age: "3-10 anos",
-      description: "Transformamos cada celebração numa experiência única, com um espaço acolhedor, divertido e preparado para receber aniversários, batizados, festas temáticas e outros eventos infantis.",
+      description: "Transformamos cada celebração numa experiência única, com um espaço acolhedor, divertido e preparado para receber aniversários, baptizados, festas temáticas e outros eventos infantis.",
       image: heroImage
-    }
-  ];
-
-  const testimonials = [
-    {
-      name: "Maria Silva",
-      role: "Mãe do João",
-      text: "A Betteryou Kids transformou a vida do meu filho. Ele aprende brincando e sempre chega em casa feliz!",
-      rating: 5
-    },
-    {
-      name: "Carlos Mendes",
-      role: "Pai da Ana",
-      text: "Excelente metodologia. Nossa filha desenvolveu muito a criatividade e as habilidades sociais.",
-      rating: 5
     }
   ];
 
@@ -106,9 +161,9 @@ const Home = () => {
               Sobre a Betteryou Kids
             </h2>
             <p className="text-xl text-muted-foreground max-w-4xl mx-auto leading-relaxed">
-              Somos uma instituição educacional revolucionária que transforma o futuro através da educação afetiva. 
+              Somos uma instituição educacional revolucionária que transforma o futuro através da educação afectiva. 
               Nossa missão é formar crianças felizes, criativas e preparadas para um mundo em constante evolução, 
-              utilizando metodologias inovadoras que integram amor, natureza e criatividade em cada momento de aprendizado.
+              utilizando metodologias inovadoras que integram amor, natureza e criatividade em cada momento de aprendizagem.
             </p>
           </div>
 
@@ -272,7 +327,7 @@ const Home = () => {
             </h2>
             <p className="text-xl text-muted-foreground max-w-4xl mx-auto">
               Explore nossos espaços educativos e veja momentos especiais das crianças 
-              em actividades, brincadeiras e aprendizado. Cada foto conta uma história 
+              em actividades, brincadeiras e aprendizagem. Cada foto conta uma história 
               de crescimento, alegria e descobertas.
             </p>
           </div>
@@ -287,7 +342,7 @@ const Home = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-primary/60 to-transparent"></div>
               <div className="absolute bottom-4 left-4 text-white">
                 <h4 className="font-semibold">Salas de Aula</h4>
-                <p className="text-sm text-white/80">Ambientes preparados para aprendizado</p>
+                <p className="text-sm text-white/80">Ambientes preparados para aprendizagem</p>
               </div>
             </div>
 
@@ -396,7 +451,7 @@ const Home = () => {
               className="bg-accent hover:bg-accent/90 text-primary font-semibold px-8 py-4 text-lg"
             >
               <Link to="/contato">
-                Agendar Visita
+                {ctaPrimary}
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Link>
             </Button>

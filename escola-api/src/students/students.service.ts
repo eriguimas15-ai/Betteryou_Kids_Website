@@ -39,6 +39,36 @@ export type FichaPayload = {
   activities?: string[];
 };
 
+const studentPortalInclude = {
+  unit: true,
+  service: true,
+  academicYear: true,
+  room: true,
+  enrollment: {
+    include: {
+      documents: {
+        select: {
+          id: true,
+          type: true,
+          fileName: true,
+          filePath: true,
+          mimeType: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: 'desc' as const },
+      },
+      waitlistEntry: true,
+    },
+  },
+  renewal: {
+    select: {
+      id: true,
+      status: true,
+      createdAt: true,
+    },
+  },
+} as const;
+
 @Injectable()
 export class StudentsService {
   constructor(private prisma: PrismaService) {}
@@ -164,12 +194,7 @@ export class StudentsService {
       user.role === Role.COORDENACAO
     ) {
       return this.prisma.student.findMany({
-        include: {
-          unit: true,
-          service: true,
-          academicYear: true,
-          room: true,
-        },
+        include: studentPortalInclude,
         orderBy: { updatedAt: 'desc' },
       });
     }
@@ -180,12 +205,7 @@ export class StudentsService {
           { guardianEmail: user.email.toLowerCase() },
         ],
       },
-      include: {
-        unit: true,
-        service: true,
-        academicYear: true,
-        room: true,
-      },
+      include: studentPortalInclude,
       orderBy: { updatedAt: 'desc' },
     });
   }
@@ -193,12 +213,7 @@ export class StudentsService {
   async getOne(id: string, user: { id: string; email: string; role: string }) {
     const student = await this.prisma.student.findUnique({
       where: { id },
-      include: {
-        unit: true,
-        service: true,
-        academicYear: true,
-        room: true,
-      },
+      include: studentPortalInclude,
     });
     if (!student) throw new NotFoundException('Ficha não encontrada');
     this.assertCanAccess(student, user);
@@ -284,12 +299,7 @@ export class StudentsService {
         profileStatus: StudentProfileStatus.COMPLETA,
         guardianUserId: student.guardianUserId || user.id,
       },
-      include: {
-        unit: true,
-        service: true,
-        academicYear: true,
-        room: true,
-      },
+      include: studentPortalInclude,
     });
   }
 

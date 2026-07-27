@@ -6,6 +6,7 @@ import {
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
+import { AuditService } from '../common/audit/audit.service';
 import {
   DEFAULT_PROFILE_MODULES,
   PLATFORM_MODULES,
@@ -14,7 +15,10 @@ import {
 
 @Injectable()
 export class UsersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private audit: AuditService,
+  ) {}
 
   listModules() {
     return PLATFORM_MODULES;
@@ -27,13 +31,16 @@ export class UsersService {
     });
   }
 
-  async createProfile(data: {
-    name: string;
-    description?: string;
-    modules: string[];
-    systemKey?: string;
-  }) {
-    return this.prisma.accessProfile.create({
+  async createProfile(
+    data: {
+      name: string;
+      description?: string;
+      modules: string[];
+      systemKey?: string;
+    },
+    actorId?: string,
+  ) {
+    const profile = await this.prisma.accessProfile.create({
       data: {
         name: data.name.trim(),
         description: data.description?.trim() || null,
@@ -41,6 +48,14 @@ export class UsersService {
         modules: data.modules,
       },
     });
+    await this.audit.record({
+      userId: actorId,
+      action: 'ACCESS_PROFILE_CREATED',
+      entity: 'AccessProfile',
+      entityId: profile.id,
+      metadata: { name: profile.name, modules: data.modules },
+    });
+    return profile;
   }
 
   async updateProfile(
@@ -51,9 +66,10 @@ export class UsersService {
       modules?: string[];
       active?: boolean;
     },
+    actorId?: string,
   ) {
     await this.getProfileOrThrow(id);
-    return this.prisma.accessProfile.update({
+    const updated = await this.prisma.accessProfile.update({
       where: { id },
       data: {
         ...(data.name != null ? { name: data.name.trim() } : {}),
@@ -64,9 +80,17 @@ export class UsersService {
         ...(data.active != null ? { active: data.active } : {}),
       },
     });
+    await this.audit.record({
+      userId: actorId,
+      action: 'ACCESS_PROFILE_UPDATED',
+      entity: 'AccessProfile',
+      entityId: id,
+      metadata: { changes: { ...data } },
+    });
+    return updated;
   }
 
-  async deleteProfile(id: string) {
+  async deleteProfile(id: string, actorId?: string) {
     const profile = await this.getProfileOrThrow(id);
     if (profile.systemKey === 'ADMIN') {
       throw new BadRequestException('O perfil Administrador não pode ser removido');
@@ -80,6 +104,13 @@ export class UsersService {
       );
     }
     await this.prisma.accessProfile.delete({ where: { id } });
+    await this.audit.record({
+      userId: actorId,
+      action: 'ACCESS_PROFILE_DELETED',
+      entity: 'AccessProfile',
+      entityId: id,
+      metadata: { name: profile.name },
+    });
     return { ok: true };
   }
 
@@ -101,14 +132,17 @@ export class UsersService {
     });
   }
 
-  async createUser(data: {
-    name: string;
-    email: string;
-    password: string;
-    role?: Role;
-    accessProfileId?: string;
-    active?: boolean;
-  }) {
+  async createUser(
+    data: {
+      name: string;
+      email: string;
+      password: string;
+      role?: Role;
+      accessProfileId?: string;
+      active?: boolean;
+    },
+    actorId?: string,
+  ) {
     const email = data.email.trim().toLowerCase();
     const existing = await this.prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -131,7 +165,7 @@ export class UsersService {
     }
 
     const passwordHash = await bcrypt.hash(data.password, 12);
-    return this.prisma.user.create({
+    const created = await this.prisma.user.create({
       data: {
         name: data.name.trim(),
         email,
@@ -150,6 +184,14 @@ export class UsersService {
         createdAt: true,
       },
     });
+    await this.audit.record({
+      userId: actorId,
+      action: 'USER_CREATED',
+      entity: 'User',
+      entityId: created.id,
+      metadata: { email: created.email, role: created.role },
+    });
+    return created;
   }
 
   async updateUser(
@@ -162,6 +204,7 @@ export class UsersService {
       accessProfileId?: string | null;
       active?: boolean;
     },
+    actorId?: string,
   ) {
     const user = await this.prisma.user.findUnique({ where: { id } });
     if (!user) throw new NotFoundException('Utilizador não encontrado');
@@ -179,7 +222,7 @@ export class UsersService {
       }
     }
 
-    return this.prisma.user.update({
+    const updated = await this.prisma.user.update({
       where: { id },
       data: {
         ...(data.name != null ? { name: data.name.trim() } : {}),
@@ -203,6 +246,24 @@ export class UsersService {
         createdAt: true,
       },
     });
+    await this.audit.record({
+      userId: actorId,
+      action: 'USER_UPDATED',
+      entity: 'User',
+      entityId: id,
+      metadata: {
+        roleChanged: user.role !== updated.role ? updated.role : undefined,
+        activeChanged:
+          data.active != null && data.active !== user.active
+            ? data.active
+            : undefined,
+        profileChanged:
+          user.accessProfileId !== updated.accessProfileId
+            ? updated.accessProfileId
+            : undefined,
+      },
+    });
+    return updated;
   }
 
   async ensureDefaultProfiles() {
@@ -215,7 +276,7 @@ export class UsersService {
             : systemKey === 'COMUNICACAO'
               ? 'Comunicação'
               : systemKey === 'COORDENACAO'
-                ? 'Coordinação'
+                ? 'Coordenação'
                 : systemKey === 'PROFESSOR'
                   ? 'Professor'
                   : systemKey === 'ENCARREGADO'

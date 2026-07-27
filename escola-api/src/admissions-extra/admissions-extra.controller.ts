@@ -9,7 +9,10 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
-import { JobStatus, RenewalStatus, Role } from '@prisma/client';
+import { JobStatus, RenewalStatus, Role, ActivityPricing } from '@prisma/client';
+import { Public } from '../common/decorators/public.decorator';
+import { Roles } from '../common/decorators/roles.decorator';
+import { CurrentUser } from '../common/decorators/current-user.decorator';
 import {
   IsArray,
   IsBoolean,
@@ -24,8 +27,6 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Public } from '../common/decorators/public.decorator';
-import { Roles } from '../common/decorators/roles.decorator';
 import {
   ActivitiesService,
   JobsService,
@@ -35,9 +36,12 @@ import {
   EmergencyContactDto,
   GuardianDto,
 } from '../enrollments/dto/create-enrollment.dto';
-import { ActivityPricing } from '@prisma/client';
 
 class ActivityServiceLinkDto {
+  @IsOptional()
+  @IsString()
+  unitId?: string | null;
+
   @IsString()
   serviceId: string;
 
@@ -320,6 +324,16 @@ export class RenewalsController {
   }
 
   @ApiBearerAuth()
+  @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO, Role.ENCARREGADO)
+  @Get('mine')
+  listMine(
+    @CurrentUser()
+    user: { id: string; email: string; role: string },
+  ) {
+    return this.renewals.listMine(user);
+  }
+
+  @ApiBearerAuth()
   @Roles(Role.ADMIN, Role.DIRECAO, Role.COORDENACAO)
   @Patch(':id/status')
   setStatus(@Param('id') id: string, @Body() dto: RenewalStatusDto) {
@@ -381,8 +395,12 @@ export class ActivitiesController {
 
   @Public()
   @Get('public')
-  listPublic(@Query('serviceName') serviceName?: string) {
-    return this.activities.listPublic(serviceName);
+  listPublic(
+    @Query('serviceName') serviceName?: string,
+    @Query('unitId') unitId?: string,
+    @Query('unitName') unitName?: string,
+  ) {
+    return this.activities.listPublic(serviceName, unitId, unitName);
   }
 
   @ApiBearerAuth()

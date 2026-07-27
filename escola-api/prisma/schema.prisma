@@ -35,6 +35,7 @@ enum WaitlistStatus {
 
 enum ContentStatus {
   RASCUNHO
+  EM_REVISAO
   PUBLICADO
   ARQUIVADO
 }
@@ -57,6 +58,148 @@ enum StudentProfileStatus {
   COMPLETA
 }
 
+enum AttendanceStatus {
+  PRESENTE
+  FALTA
+  FALTA_JUSTIFICADA
+  ATRASO
+}
+
+enum CommunicationStatus {
+  RASCUNHO
+  PUBLICADO
+  ARQUIVADO
+}
+
+/// Público-alvo de um comunicado.
+enum CommunicationAudience {
+  ESCOLA
+  UNIDADE
+  SERVICO
+  TURMA
+  ENCARREGADO
+}
+
+/// Tipo de classificação de uma avaliação (numérica ou qualitativa).
+enum AssessmentGradeType {
+  NUMERICA
+  QUALITATIVA
+}
+
+/// Categoria de um evento/festa.
+enum EventType {
+  FESTA
+  EVENTO
+  PASSEIO
+  WORKSHOP
+}
+
+/// Estado de uma inscrição num evento/festa.
+enum EventRegistrationStatus {
+  INSCRITO
+  LISTA_ESPERA
+  CANCELADO
+}
+
+/// Estado de uma fatura/mensalidade.
+enum InvoiceStatus {
+  PENDENTE
+  PAGO
+  VENCIDO
+  ANULADO
+}
+
+/// Método de pagamento (contexto Angola).
+enum PaymentMethod {
+  NUMERARIO
+  TRANSFERENCIA
+  MULTICAIXA
+  TPA
+  OUTRO
+}
+
+/// Programa/tempo de frequência (define a propina aplicável).
+/// Creche/Pré-Escolar/ATL: MEIO_TEMPO, MEIO_TEMPO_ALIMENTACAO, TEMPO_INTEIRO.
+/// 1.º Ciclo: REGULAR, INTEGRAL.
+enum FeeProgram {
+  MEIO_TEMPO
+  MEIO_TEMPO_ALIMENTACAO
+  TEMPO_INTEIRO
+  REGULAR
+  INTEGRAL
+}
+
+/// Natureza de um plano financeiro.
+enum FeeKind {
+  PROPINA
+  TAXA
+  PRODUTO
+}
+
+/// Estado de um Plano Educativo Individual (PEI).
+enum PeiStatus {
+  RASCUNHO
+  ACTIVO
+  EM_REVISAO
+  CONCLUIDO
+  ARQUIVADO
+}
+
+/// Estado de uma síntese descritiva do aluno.
+enum DescriptiveReportStatus {
+  RASCUNHO
+  PUBLICADO
+}
+
+/// Estado de um boletim / relatório de período.
+enum ReportCardStatus {
+  RASCUNHO
+  PUBLICADO
+}
+
+/// Estado de uma substituição docente.
+enum SubstitutionStatus {
+  PLANEADA
+  CONFIRMADA
+  CANCELADA
+  CONCLUIDA
+}
+
+/// Resultado do envio de um SMS.
+enum SmsDeliveryStatus {
+  SIMULADO
+  ENVIADO
+  FALHA
+}
+
+/// Tipo de reunião escolar.
+enum MeetingType {
+  PEDAGOGICA
+  COORDENACAO
+  ENCARREGADOS
+  OUTRA
+}
+
+/// Estado de uma reunião.
+enum MeetingStatus {
+  AGENDADA
+  REALIZADA
+  CANCELADA
+}
+
+/// Estado de uma acta de reunião.
+enum MeetingMinutesStatus {
+  RASCUNHO
+  PUBLICADA
+}
+
+/// Tipologia de registo de comportamento.
+enum BehaviorType {
+  POSITIVO
+  A_MELHORAR
+  INCIDENTE
+}
+
 model User {
   id              String         @id @default(cuid())
   name            String
@@ -73,6 +216,30 @@ model User {
   contentPages    ContentPage[]  @relation("ContentAuthor")
   mediaAssets     MediaAsset[]   @relation("MediaUploader")
   students        Student[]      @relation("GuardianStudents")
+  attendances     Attendance[]   @relation("AttendanceRecorder")
+  communicationsAuthored Communication[]     @relation("CommunicationAuthor")
+  communicationsTargeted Communication[]     @relation("CommunicationTarget")
+  communicationReads     CommunicationRead[] @relation("CommunicationReader")
+  lessonSummariesAuthored LessonSummary[]    @relation("LessonSummaryAuthor")
+  assessmentsAuthored     Assessment[]       @relation("AssessmentAuthor")
+  eventsAuthored          Event[]            @relation("EventAuthor")
+  eventRegistrations      EventRegistration[] @relation("EventRegistrationGuardian")
+  invoicesCreated         Invoice[]          @relation("InvoiceCreator")
+  paymentsRecorded        Payment[]          @relation("PaymentRecorder")
+  peiPlansCreated         PeiPlan[]          @relation("PeiPlanAuthor")
+  peiReviewsAuthored      PeiReview[]        @relation("PeiReviewAuthor")
+  descriptiveReportsAuthored DescriptiveReport[] @relation("DescriptiveReportAuthor")
+  reportCardsAuthored     ReportCard[]       @relation("ReportCardAuthor")
+  substitutionsCreated    Substitution[]     @relation("SubstitutionCreator")
+  substitutionsAsSubstitute Substitution[]   @relation("SubstitutionSubstituteUser")
+  smsLogsCreated          SmsLog[]           @relation("SmsLogAuthor")
+  nonTeachingActivitiesAuthored NonTeachingActivity[] @relation("NonTeachingActivityAuthor")
+  nonTeachingActivitiesAsTeacher NonTeachingActivity[] @relation("NonTeachingActivityTeacher")
+  meetingsCreated         Meeting[]          @relation("MeetingCreator")
+  meetingMinutesAuthored  MeetingMinutes[]   @relation("MeetingMinutesAuthor")
+  behaviorRecordsAuthored BehaviorRecord[]   @relation("BehaviorRecordAuthor")
+  qualificationsAuthored  StudentQualification[] @relation("StudentQualificationAuthor")
+  schoolManualsAuthored   SchoolManual[]     @relation("SchoolManualAuthor")
 }
 
 /// Perfil de acesso configurável pelo admin (módulos da plataforma).
@@ -111,6 +278,15 @@ model Unit {
   enrollments Enrollment[]
   renewals    Renewal[]
   students    Student[]
+  communications Communication[]
+  events      Event[]
+  feePlans    FeePlan[]
+  activityOfferings ActivityServiceOffering[]
+  curriculumPlans CurriculumPlan[]
+  smsLogs     SmsLog[]
+  meetings    Meeting[]
+  schoolManuals SchoolManual[]
+  assessmentPeriods AssessmentPeriod[]
 }
 
 model ServiceOffering {
@@ -126,6 +302,10 @@ model ServiceOffering {
   renewals         Renewal[]
   students         Student[]
   activityOfferings ActivityServiceOffering[]
+  communications   Communication[]
+  feePlans         FeePlan[]
+  curriculumPlans  CurriculumPlan[]
+  schoolManuals    SchoolManual[]
 }
 
 model UnitService {
@@ -153,6 +333,13 @@ model AcademicYear {
   renewals        Renewal[]
   students        Student[]
   classGroups     ClassGroup[]
+  feePlans        FeePlan[]
+  peiPlans        PeiPlan[]
+  curriculumPlans CurriculumPlan[]
+  descriptiveReports DescriptiveReport[]
+  schoolManuals   SchoolManual[]
+  qualifications  StudentQualification[]
+  assessmentPeriods AssessmentPeriod[]
 }
 
 model Room {
@@ -202,6 +389,17 @@ model ClassGroup {
   updatedAt      DateTime     @updatedAt
   room           Room         @relation(fields: [roomId], references: [id], onDelete: Cascade)
   academicYear   AcademicYear @relation(fields: [academicYearId], references: [id])
+  attendances    Attendance[]
+  communications Communication[]
+  lessonSummaries LessonSummary[]
+  assessments     Assessment[]
+  scheduleEntries ScheduleEntry[]
+  curriculumPlans CurriculumPlan[]
+  substitutions   Substitution[]
+  smsLogs         SmsLog[]
+  nonTeachingActivities NonTeachingActivity[]
+  meetings        Meeting[]
+  reportCards     ReportCard[]
 
   @@unique([name, roomId, academicYearId])
   @@index([academicYearId, active])
@@ -288,6 +486,8 @@ model ContentPage {
   title       String
   status      ContentStatus    @default(RASCUNHO)
   authorId    String?
+  /// Momento agendado para publicação (null = imediato).
+  publishAt   DateTime?
   publishedAt DateTime?
   createdAt   DateTime         @default(now())
   updatedAt   DateTime         @updatedAt
@@ -317,6 +517,8 @@ model MediaAsset {
   mimeType     String
   filePath     String
   altText      String?
+  /// Categoria de organização da biblioteca (ex.: hero, galeria, servicos).
+  category     String?
   uploadedById String?
   createdAt    DateTime         @default(now())
   uploadedBy   User?            @relation("MediaUploader", fields: [uploadedById], references: [id])
@@ -334,6 +536,9 @@ model Testimonial {
   status     ContentStatus @default(RASCUNHO)
   mediaId    String?
   sortOrder  Int           @default(0)
+  /// Momento agendado para publicação (null = imediato).
+  publishAt   DateTime?
+  publishedAt DateTime?
   createdAt  DateTime      @default(now())
   updatedAt  DateTime      @updatedAt
   media      MediaAsset?   @relation(fields: [mediaId], references: [id])
@@ -345,6 +550,9 @@ model GalleryAlbum {
   slug      String        @unique
   status    ContentStatus @default(RASCUNHO)
   sortOrder Int           @default(0)
+  /// Momento agendado para publicação (null = imediato).
+  publishAt   DateTime?
+  publishedAt DateTime?
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   items     GalleryItem[]
@@ -354,6 +562,7 @@ model GalleryItem {
   id        String       @id @default(cuid())
   albumId   String
   mediaId   String
+  title     String?
   caption   String?
   sortOrder Int          @default(0)
   createdAt DateTime     @default(now())
@@ -456,6 +665,8 @@ model ActivityOffering {
 /// Actividades disponíveis por serviço (N/A = sem registo nesta tabela).
 model ActivityServiceOffering {
   id         String           @id @default(cuid())
+  /// Unidade específica desta oferta. Null = aplica-se a todas as unidades (fallback global).
+  unitId     String?
   activityId String
   serviceId  String
   pricing    ActivityPricing
@@ -464,11 +675,32 @@ model ActivityServiceOffering {
   active     Boolean          @default(true)
   createdAt  DateTime         @default(now())
   updatedAt  DateTime         @updatedAt
+  unit       Unit?            @relation(fields: [unitId], references: [id], onDelete: SetNull)
   activity   ActivityOffering @relation(fields: [activityId], references: [id], onDelete: Cascade)
   service    ServiceOffering  @relation(fields: [serviceId], references: [id], onDelete: Cascade)
 
-  @@unique([activityId, serviceId])
+  @@unique([unitId, activityId, serviceId])
+  @@index([activityId])
   @@index([serviceId, active])
+  @@index([unitId, serviceId, active])
+}
+
+/// Definições globais da plataforma (singleton id = "default").
+model PlatformSettings {
+  id                    String   @id @default("default")
+  /// Prazo de resposta da lista de espera após notificação (horas).
+  waitlistResponseHours Int      @default(48)
+  /// Quando falso, as reservas da lista de espera não expiram automaticamente.
+  waitlistDeadlineEnabled Boolean @default(true)
+  /// Activa o envio por fornecedor real quando a configuração está completa.
+  smsEnabled            Boolean  @default(false)
+  /// Fornecedor SMS preferido: "console" (simulação) ou "http".
+  smsProvider           String   @default("console")
+  /// URL base do gateway HTTP (opcional, pode vir de env).
+  smsApiUrl             String?
+  /// Remetente/from padrão (opcional, pode vir de env).
+  smsFrom               String?
+  updatedAt             DateTime @updatedAt
 }
 
 /// Ficha do aluno — preenchida/atualizada pelo encarregado após aceitação.
@@ -481,6 +713,8 @@ model Student {
   unitId               String
   serviceId            String
   roomId               String?
+  /// Programa/tempo de frequência — resolve a propina mensal aplicável.
+  program              FeeProgram?
   childFullName        String
   childBirthDate       DateTime?
   childSex             String?
@@ -515,8 +749,714 @@ model Student {
   unit                 Unit                 @relation(fields: [unitId], references: [id])
   service              ServiceOffering      @relation(fields: [serviceId], references: [id])
   room                 Room?                @relation(fields: [roomId], references: [id])
+  attendances          Attendance[]
+  assessments          Assessment[]
+  eventRegistrations   EventRegistration[]
+  invoices             Invoice[]
+  neeProfile           NeeProfile?
+  peiPlans             PeiPlan[]
+  descriptiveReports   DescriptiveReport[]
+  behaviorRecords      BehaviorRecord[]
+  qualifications       StudentQualification[]
+  reportCards          ReportCard[]
 
   @@index([guardianEmail])
   @@index([profileStatus])
   @@index([guardianUserId])
+}
+
+/// Perfil de Necessidades Educativas Especiais (NEE) do aluno.
+model NeeProfile {
+  id               String    @id @default(cuid())
+  studentId        String    @unique
+  /// Quando falso, o aluno deixa de figurar como NEE activo.
+  active           Boolean   @default(true)
+  /// Resumo diagnóstico / tipologia (apenas staff).
+  diagnosisSummary String?   @db.Text
+  /// Notas internas da equipa educativa.
+  notes            String?   @db.Text
+  identifiedAt     DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  student          Student   @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  peiPlans         PeiPlan[]
+
+  @@index([active])
+}
+
+/// Plano Educativo Individual (PEI) associado a um aluno / ano lectivo.
+model PeiPlan {
+  id                 String        @id @default(cuid())
+  studentId          String
+  neeProfileId       String?
+  academicYearId     String?
+  status             PeiStatus     @default(RASCUNHO)
+  title              String?
+  /// Objectivos educativos (visíveis ao encarregado no resumo).
+  objectives         String        @db.Text
+  /// Estratégias pedagógicas.
+  strategies         String?       @db.Text
+  /// Apoios / recursos / adaptações.
+  supports           String?       @db.Text
+  /// Resumo opcional dirigido ao encarregado (se vazio, usa objectivos).
+  guardianSummary    String?       @db.Text
+  responsibleTeacher String?
+  /// Notas da coordenação / direcção (apenas staff).
+  coordinatorNotes   String?       @db.Text
+  reviewDate         DateTime?     @db.Date
+  createdById        String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  student            Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  neeProfile         NeeProfile?   @relation(fields: [neeProfileId], references: [id], onDelete: SetNull)
+  academicYear       AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  createdBy          User?         @relation("PeiPlanAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+  reviews            PeiReview[]
+
+  @@index([studentId, status])
+  @@index([academicYearId])
+  @@index([status, reviewDate])
+  @@index([neeProfileId])
+}
+
+/// Registo de acompanhamento / revisão de um PEI.
+model PeiReview {
+  id        String   @id @default(cuid())
+  peiPlanId String
+  date      DateTime @db.Date
+  notes     String   @db.Text
+  authorId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  peiPlan   PeiPlan  @relation(fields: [peiPlanId], references: [id], onDelete: Cascade)
+  author    User?    @relation("PeiReviewAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([peiPlanId, date])
+}
+
+/// Registo de presença de um aluno numa turma, por dia.
+model Attendance {
+  id           String           @id @default(cuid())
+  studentId    String
+  classGroupId String
+  date         DateTime         @db.Date
+  status       AttendanceStatus @default(PRESENTE)
+  note         String?          @db.Text
+  recordedById String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+  student      Student          @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classGroup   ClassGroup       @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  recordedBy   User?            @relation("AttendanceRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@unique([studentId, classGroupId, date])
+  @@index([classGroupId, date])
+  @@index([studentId, date])
+}
+
+/// Comunicado / mensagem da escola para encarregados.
+model Communication {
+  id                  String                @id @default(cuid())
+  title               String
+  body                String                @db.Text
+  audience            CommunicationAudience @default(ESCOLA)
+  status              CommunicationStatus   @default(RASCUNHO)
+  authorId            String?
+  /// Segmentação por unidade (audience = UNIDADE)
+  unitId              String?
+  /// Segmentação por serviço (audience = SERVICO)
+  serviceId           String?
+  /// Segmentação por turma (audience = TURMA)
+  classGroupId        String?
+  /// Encarregado específico (audience = ENCARREGADO) — utilizador, se existir
+  targetUserId        String?
+  /// Encarregado específico (audience = ENCARREGADO) — email de referência
+  targetGuardianEmail String?
+  /// URL/caminho de anexo opcional
+  attachmentUrl       String?
+  publishedAt         DateTime?
+  createdAt           DateTime              @default(now())
+  updatedAt           DateTime              @updatedAt
+  author              User?                 @relation("CommunicationAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  unit                Unit?                 @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  service             ServiceOffering?      @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  classGroup          ClassGroup?           @relation(fields: [classGroupId], references: [id], onDelete: SetNull)
+  targetUser          User?                 @relation("CommunicationTarget", fields: [targetUserId], references: [id], onDelete: SetNull)
+  reads               CommunicationRead[]
+  smsLogs             SmsLog[]
+
+  @@index([status, publishedAt])
+  @@index([audience])
+  @@index([unitId])
+  @@index([serviceId])
+  @@index([classGroupId])
+  @@index([targetGuardianEmail])
+}
+
+/// Estado de leitura de um comunicado por encarregado.
+model CommunicationRead {
+  id              String        @id @default(cuid())
+  communicationId String
+  userId          String
+  readAt          DateTime      @default(now())
+  communication   Communication @relation(fields: [communicationId], references: [id], onDelete: Cascade)
+  user            User          @relation("CommunicationReader", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([communicationId, userId])
+  @@index([userId])
+}
+
+/// Sumário de aula de uma turma, por dia.
+model LessonSummary {
+  id           String     @id @default(cuid())
+  classGroupId String
+  date         DateTime   @db.Date
+  subject      String
+  topic        String?
+  description  String     @db.Text
+  homework     String?    @db.Text
+  authorId     String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  classGroup   ClassGroup @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  author       User?      @relation("LessonSummaryAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([classGroupId, date])
+}
+
+/// Avaliação de um aluno (dentro de uma turma).
+model Assessment {
+  id           String              @id @default(cuid())
+  studentId    String
+  classGroupId String
+  /// Período lectivo opcional (avaliações contínuas podem ficar sem período).
+  periodId     String?
+  title        String
+  subject      String
+  date         DateTime            @db.Date
+  gradeType    AssessmentGradeType @default(NUMERICA)
+  /// Nota numérica (quando gradeType = NUMERICA)
+  gradeValue   Float?
+  /// Nota qualitativa (quando gradeType = QUALITATIVA), ex.: "Muito Bom"
+  gradeLabel   String?
+  note         String?             @db.Text
+  authorId     String?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+  student      Student             @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  classGroup   ClassGroup          @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  period       AssessmentPeriod?   @relation(fields: [periodId], references: [id], onDelete: SetNull)
+  author       User?               @relation("AssessmentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([studentId, date])
+  @@index([classGroupId, date])
+  @@index([periodId])
+}
+
+/// Período lectivo de avaliação (trimestre / período / semestre).
+model AssessmentPeriod {
+  id             String       @id @default(cuid())
+  name           String
+  academicYearId String
+  /// Se definido, o período aplica-se só a essa unidade; senão, a toda a escola.
+  unitId         String?
+  startDate      DateTime     @db.Date
+  endDate        DateTime     @db.Date
+  sortOrder      Int          @default(0)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  unit           Unit?        @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  assessments    Assessment[]
+  reportCards    ReportCard[]
+
+  @@index([academicYearId, sortOrder])
+  @@index([unitId])
+}
+
+/// Boletim / relatório de avaliações de um aluno num período.
+model ReportCard {
+  id             String          @id @default(cuid())
+  studentId      String
+  periodId       String
+  classGroupId   String
+  status         ReportCardStatus @default(RASCUNHO)
+  overallComment String?         @db.Text
+  publishedAt    DateTime?
+  authorId       String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  student        Student         @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  period         AssessmentPeriod @relation(fields: [periodId], references: [id], onDelete: Cascade)
+  classGroup     ClassGroup      @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  author         User?           @relation("ReportCardAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  lines          ReportCardLine[]
+
+  @@unique([studentId, periodId, classGroupId])
+  @@index([periodId, status])
+  @@index([classGroupId, status])
+  @@index([status, publishedAt])
+}
+
+/// Linha de um boletim (avaliação, síntese ou entrada manual).
+model ReportCardLine {
+  id           String               @id @default(cuid())
+  reportCardId String
+  subject      String
+  title        String
+  gradeType    AssessmentGradeType?
+  gradeValue   Float?
+  gradeLabel   String?
+  comment      String?              @db.Text
+  /// AVALIACAO | SINTESE | MANUAL
+  sourceType   String               @default("MANUAL")
+  sourceId     String?
+  sortOrder    Int                  @default(0)
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  reportCard   ReportCard           @relation(fields: [reportCardId], references: [id], onDelete: Cascade)
+
+  @@index([reportCardId, sortOrder])
+}
+
+/// Entrada do horário semanal de uma turma.
+model ScheduleEntry {
+  id           String     @id @default(cuid())
+  classGroupId String
+  /// Dia da semana: 1 = Segunda … 7 = Domingo
+  weekday      Int
+  /// Hora de início "HH:MM"
+  startTime    String
+  /// Hora de fim "HH:MM"
+  endTime      String
+  /// Disciplina/actividade
+  subject      String
+  /// Sala/local (opcional)
+  room         String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  classGroup   ClassGroup @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+
+  @@index([classGroupId, weekday])
+}
+
+/// Evento / festa infantil (festas, passeios, workshops).
+model Event {
+  id          String              @id @default(cuid())
+  title       String
+  description String              @db.Text
+  type        EventType           @default(EVENTO)
+  status      ContentStatus       @default(RASCUNHO)
+  /// Início do evento.
+  startAt     DateTime
+  /// Fim do evento (opcional).
+  endAt       DateTime?
+  /// Local/morada do evento.
+  location    String?
+  /// Unidade associada (opcional).
+  unitId      String?
+  /// Lotação máxima de inscrições (null = sem limite).
+  capacity    Int?
+  /// Preço em AKZ (unidades inteiras). Null = gratuito.
+  priceAkz    Int?
+  /// URL/caminho de imagem ou anexo (opcional).
+  imageUrl    String?
+  authorId    String?
+  /// Momento agendado para publicação (null = imediato).
+  publishAt   DateTime?
+  publishedAt DateTime?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  author      User?               @relation("EventAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  unit        Unit?               @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  registrations EventRegistration[]
+
+  @@index([status, startAt])
+  @@index([type])
+  @@index([unitId])
+}
+
+/// Inscrição de uma criança/encarregado num evento.
+model EventRegistration {
+  id             String                  @id @default(cuid())
+  eventId        String
+  /// Encarregado (utilizador), se autenticado.
+  guardianUserId String?
+  /// Aluno associado, se aplicável.
+  studentId      String?
+  childName      String
+  guardianName   String
+  guardianEmail  String
+  guardianPhone  String?
+  attendees      Int                     @default(1)
+  notes          String?                 @db.Text
+  status         EventRegistrationStatus @default(INSCRITO)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  event          Event                   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  guardianUser   User?                   @relation("EventRegistrationGuardian", fields: [guardianUserId], references: [id], onDelete: SetNull)
+  student        Student?                @relation(fields: [studentId], references: [id], onDelete: SetNull)
+
+  @@unique([eventId, guardianEmail])
+  @@index([eventId, status])
+  @@index([guardianUserId])
+  @@index([guardianEmail])
+}
+
+/// Plano de propina/mensalidade (valores em AKZ).
+model FeePlan {
+  id             String           @id @default(cuid())
+  name           String
+  description    String?          @db.Text
+  /// Natureza do plano: propina mensal, taxa anual/inscrição ou produto.
+  kind           FeeKind          @default(PROPINA)
+  /// Valor em AKZ (unidades inteiras).
+  amountAkz      Int
+  /// Unidade associada (opcional). Preçário é definido por unidade.
+  unitId         String?
+  /// Serviço associado (opcional), ex.: Creche, Pré-Escolar.
+  serviceId      String?
+  /// Programa/tempo aplicável (só para propinas). Null nas taxas/produtos.
+  program        FeeProgram?
+  /// Ano letivo associado (opcional).
+  academicYearId String?
+  active         Boolean          @default(true)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  unit           Unit?            @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  service        ServiceOffering? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  academicYear   AcademicYear?    @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  invoices       Invoice[]
+
+  @@unique([unitId, serviceId, program, kind, name])
+  @@index([active])
+  @@index([kind])
+  @@index([unitId, serviceId, program])
+  @@index([serviceId, program])
+  @@index([academicYearId])
+}
+
+/// Fatura/mensalidade de um aluno, por mês de referência.
+model Invoice {
+  id             String        @id @default(cuid())
+  studentId      String
+  feePlanId      String?
+  /// Mês de referência no formato "YYYY-MM".
+  referenceMonth String
+  description    String
+  /// Valor em AKZ (unidades inteiras).
+  amountAkz      Int
+  dueDate        DateTime      @db.Date
+  status         InvoiceStatus @default(PENDENTE)
+  /// Email do encarregado (snapshot para propriedade/consulta).
+  guardianEmail  String
+  notes          String?       @db.Text
+  createdById    String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  student        Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  feePlan        FeePlan?      @relation(fields: [feePlanId], references: [id], onDelete: SetNull)
+  createdBy      User?         @relation("InvoiceCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  payments       Payment[]
+
+  @@unique([studentId, referenceMonth])
+  @@index([status, dueDate])
+  @@index([studentId])
+  @@index([guardianEmail])
+}
+
+/// Pagamento efetuado contra uma fatura/mensalidade.
+model Payment {
+  id           String        @id @default(cuid())
+  invoiceId    String
+  /// Valor pago em AKZ (unidades inteiras).
+  amountAkz    Int
+  paidAt       DateTime      @db.Date
+  method       PaymentMethod @default(NUMERARIO)
+  /// Referência da transação (opcional).
+  reference    String?
+  /// Referência do recibo emitido (opcional).
+  receiptRef   String?
+  notes        String?       @db.Text
+  recordedById String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  invoice      Invoice       @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  recordedBy   User?         @relation("PaymentRecorder", fields: [recordedById], references: [id], onDelete: SetNull)
+
+  @@index([invoiceId])
+  @@index([paidAt])
+}
+
+/// Plano curricular formal por serviço / nível (Creche, Pré, ATL, 1.º Ciclo).
+model CurriculumPlan {
+  id             String          @id @default(cuid())
+  name           String
+  description    String?         @db.Text
+  serviceId      String
+  academicYearId String?
+  unitId         String?
+  /// Ex.: "Sala 1", "Pré II", "1.ª Classe"
+  levelLabel     String?
+  /// Turma opcionalmente associada ao plano.
+  classGroupId   String?
+  active         Boolean         @default(true)
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  service        ServiceOffering @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear?   @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  unit           Unit?           @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  classGroup     ClassGroup?     @relation(fields: [classGroupId], references: [id], onDelete: SetNull)
+  areas          CurriculumArea[]
+
+  @@index([serviceId, active])
+  @@index([academicYearId])
+  @@index([unitId])
+  @@index([classGroupId])
+}
+
+/// Área de aprendizagem / disciplina dentro de um plano curricular.
+model CurriculumArea {
+  id          String                @id @default(cuid())
+  planId      String
+  name        String
+  code        String?
+  description String?               @db.Text
+  sortOrder   Int                   @default(0)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  plan        CurriculumPlan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+  objectives  CurriculumObjective[]
+
+  @@index([planId, sortOrder])
+}
+
+/// Objectivo / item de programa de uma área curricular.
+model CurriculumObjective {
+  id          String         @id @default(cuid())
+  areaId      String
+  code        String?
+  title       String
+  description String?        @db.Text
+  sortOrder   Int            @default(0)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  area        CurriculumArea @relation(fields: [areaId], references: [id], onDelete: Cascade)
+
+  @@index([areaId, sortOrder])
+}
+
+/// Síntese descritiva periódica de um aluno (trimestre / período).
+model DescriptiveReport {
+  id             String                  @id @default(cuid())
+  studentId      String
+  academicYearId String?
+  /// Ex.: "1.º Trimestre", "2.º Período", "Final do ano"
+  periodLabel    String
+  /// Área / domínio opcional (ex.: "Linguagem", "Socialização").
+  areaFocus      String?
+  body           String                  @db.Text
+  status         DescriptiveReportStatus @default(RASCUNHO)
+  authorId       String?
+  publishedAt    DateTime?
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+  student        Student                 @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYear   AcademicYear?           @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  author         User?                   @relation("DescriptiveReportAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([studentId, status])
+  @@index([academicYearId])
+  @@index([status, publishedAt])
+}
+
+/// Substituição docente de uma turma num dia.
+model Substitution {
+  id                 String             @id @default(cuid())
+  date               DateTime           @db.Date
+  classGroupId       String
+  /// Nome do educador / professor ausente (pode vir de ClassGroup.teacherName).
+  absentTeacher      String
+  /// Nome do substituto (texto livre).
+  substituteTeacher  String
+  /// Utilizador opcional associado ao substituto.
+  substituteUserId   String?
+  reason             String?
+  notes              String?            @db.Text
+  status             SubstitutionStatus @default(PLANEADA)
+  createdById        String?
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+  classGroup         ClassGroup         @relation(fields: [classGroupId], references: [id], onDelete: Cascade)
+  substituteUser     User?              @relation("SubstitutionSubstituteUser", fields: [substituteUserId], references: [id], onDelete: SetNull)
+  createdBy          User?              @relation("SubstitutionCreator", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([date, classGroupId])
+  @@index([classGroupId, status])
+  @@index([status])
+}
+
+/// Registo de envio / simulação de SMS.
+model SmsLog {
+  id               String            @id @default(cuid())
+  to               String
+  body             String            @db.Text
+  status           SmsDeliveryStatus @default(SIMULADO)
+  /// Ex.: "console", "http"
+  provider         String
+  providerResponse String?           @db.Text
+  communicationId  String?
+  unitId           String?
+  classGroupId     String?
+  createdById      String?
+  createdAt        DateTime          @default(now())
+  communication    Communication?    @relation(fields: [communicationId], references: [id], onDelete: SetNull)
+  unit             Unit?             @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  classGroup       ClassGroup?       @relation(fields: [classGroupId], references: [id], onDelete: SetNull)
+  createdBy        User?             @relation("SmsLogAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+  @@index([status])
+  @@index([communicationId])
+  @@index([unitId])
+  @@index([classGroupId])
+}
+
+/// Diário de actividades não lectivas do docente (distinto do catálogo de extracurriculares).
+model NonTeachingActivity {
+  id              String      @id @default(cuid())
+  date            DateTime    @db.Date
+  /// Nome do docente (texto livre; pode coincidir com ClassGroup.teacherName).
+  teacherName     String
+  teacherUserId   String?
+  classGroupId    String?
+  /// Ex.: "Planeamento", "Formação", "Reunião de equipa", "Preparação de material"
+  type            String
+  description     String      @db.Text
+  /// Duração em minutos.
+  durationMinutes Int?
+  notes           String?     @db.Text
+  createdById     String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  teacherUser     User?       @relation("NonTeachingActivityTeacher", fields: [teacherUserId], references: [id], onDelete: SetNull)
+  classGroup      ClassGroup? @relation(fields: [classGroupId], references: [id], onDelete: SetNull)
+  createdBy       User?       @relation("NonTeachingActivityAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([date])
+  @@index([classGroupId, date])
+  @@index([teacherUserId, date])
+}
+
+/// Reunião escolar (pedagógica, coordenação, encarregados, outra).
+model Meeting {
+  id                  String        @id @default(cuid())
+  title               String
+  dateTime            DateTime
+  type                MeetingType   @default(PEDAGOGICA)
+  /// Notas sobre participantes (nomes / papéis).
+  participantsNotes   String?       @db.Text
+  unitId              String?
+  classGroupId        String?
+  status              MeetingStatus @default(AGENDADA)
+  /// Se verdadeiro, a reunião aparece na agenda do portal do encarregado.
+  visibleToGuardians  Boolean       @default(false)
+  location            String?
+  notes               String?       @db.Text
+  createdById         String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  unit                Unit?         @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  classGroup          ClassGroup?   @relation(fields: [classGroupId], references: [id], onDelete: SetNull)
+  createdBy           User?         @relation("MeetingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  minutes             MeetingMinutes?
+
+  @@index([dateTime, status])
+  @@index([type])
+  @@index([unitId])
+  @@index([classGroupId])
+  @@index([visibleToGuardians, dateTime])
+}
+
+/// Acta associada a uma reunião.
+model MeetingMinutes {
+  id          String               @id @default(cuid())
+  meetingId   String               @unique
+  content     String               @db.Text
+  authorId    String?
+  status      MeetingMinutesStatus @default(RASCUNHO)
+  publishedAt DateTime?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  meeting     Meeting              @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  author      User?                @relation("MeetingMinutesAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([status, publishedAt])
+}
+
+/// Registo de comportamento / conduta do aluno.
+model BehaviorRecord {
+  id                String       @id @default(cuid())
+  studentId         String
+  date              DateTime     @db.Date
+  type              BehaviorType @default(POSITIVO)
+  description       String       @db.Text
+  authorId          String?
+  visibleToGuardian Boolean      @default(false)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  student           Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  author            User?        @relation("BehaviorRecordAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([studentId, date])
+  @@index([type])
+  @@index([visibleToGuardian])
+}
+
+/// Manual escolar / livro de apoio associado a um serviço ou ano lectivo.
+model SchoolManual {
+  id             String           @id @default(cuid())
+  title          String
+  /// Disciplina / área (ex.: "Matemática", "Português").
+  subjectArea    String?
+  serviceId      String?
+  publisher      String?
+  academicYearId String?
+  unitId         String?
+  /// URL ou caminho do ficheiro / capa.
+  mediaUrl       String?
+  active         Boolean          @default(true)
+  notes          String?          @db.Text
+  createdById    String?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  service        ServiceOffering? @relation(fields: [serviceId], references: [id], onDelete: SetNull)
+  academicYear   AcademicYear?    @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  unit           Unit?            @relation(fields: [unitId], references: [id], onDelete: SetNull)
+  createdBy      User?            @relation("SchoolManualAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([serviceId, active])
+  @@index([academicYearId])
+  @@index([unitId])
+}
+
+/// Habilitação / certificado do aluno (ex.: natação, primeiros socorros escolar).
+model StudentQualification {
+  id          String        @id @default(cuid())
+  studentId   String
+  title       String
+  issuedAt    DateTime      @db.Date
+  issuer      String?
+  notes       String?       @db.Text
+  documentUrl String?
+  academicYearId String?
+  createdById String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  student     Student       @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear? @relation(fields: [academicYearId], references: [id], onDelete: SetNull)
+  createdBy   User?         @relation("StudentQualificationAuthor", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([studentId, issuedAt])
+  @@index([academicYearId])
 }

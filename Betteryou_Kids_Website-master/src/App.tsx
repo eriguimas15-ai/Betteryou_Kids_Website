@@ -10,6 +10,7 @@ import Home from "@/pages/Home";
 import About from "@/pages/About";
 import Services from "@/pages/Services";
 import Activities from "@/pages/Activities";
+import EventsPage from "@/pages/Events";
 import Gallery from "@/pages/Gallery";
 import Contact from "@/pages/Contact";
 import TestimonialsPage from "@/pages/Testimonials";
@@ -30,6 +31,7 @@ const SiteRoutes = () => {
           <Route path="/sobre" element={<PageTransition><About /></PageTransition>} />
           <Route path="/servicos" element={<PageTransition><Services /></PageTransition>} />
           <Route path="/actividades" element={<PageTransition><Activities /></PageTransition>} />
+          <Route path="/eventos" element={<PageTransition><EventsPage /></PageTransition>} />
           <Route path="/galeria" element={<PageTransition><Gallery /></PageTransition>} />
           <Route path="/depoimentos" element={<PageTransition><TestimonialsPage /></PageTransition>} />
           <Route path="/contato" element={<PageTransition><Contact /></PageTransition>} />

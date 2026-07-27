@@ -121,7 +121,7 @@ const Services = () => {
       icon: Clock,
       title: "ATL",
       ageRange: "3-10 anos",
-      description: "Actividades de tempos livres que complementam o ensino regular com diversão e aprendizado.",
+      description: "Actividades de tempos livres que complementam o ensino regular com diversão e aprendizagem.",
       features: [
         "Apoio aos trabalhos de casa",
         "Actividades recreativas",
@@ -136,7 +136,7 @@ const Services = () => {
       icon: Gift,
       title: "Festas e Eventos Infantis",
       ageRange: "3-10 anos",
-      description: "Transformamos cada celebração numa experiência única, com um espaço acolhedor, divertido e preparado para receber aniversários, batizados, festas temáticas e outros eventos infantis.",
+      description: "Transformamos cada celebração numa experiência única, com um espaço acolhedor, divertido e preparado para receber aniversários, baptizados, festas temáticas e outros eventos infantis.",
       features: [
         "Aluguer exclusivo do espaço",
         "Parque de estacionamento",

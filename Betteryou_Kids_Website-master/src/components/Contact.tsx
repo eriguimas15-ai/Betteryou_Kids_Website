@@ -332,7 +332,7 @@ const Contact = () => {
                   <div>
                     <h5 className="font-medium text-primary mb-2">Características:</h5>
                     <ul className="space-y-1">
-                      {location.features.map((feature, featureIndex) => (
+                      {((location as { features?: string[] }).features ?? []).map((feature, featureIndex) => (
                         <li key={featureIndex} className="flex items-center text-sm text-muted-foreground">
                           <div className="w-2 h-2 bg-primary rounded-full mr-2"></div>
                           {feature}

@@ -3,3 +3,9 @@ node_modules
 .env
 
 /generated/prisma
+
+# Local dev server logs
+*.log
+
+# Cópias de segurança da base de dados
+/backups
