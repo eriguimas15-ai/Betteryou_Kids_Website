@@ -5,6 +5,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { EnrollmentStatus, Role, WaitlistStatus } from '@prisma/client';
+import { existsSync } from 'fs';
+import { basename, resolve, sep } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
 import { RoomsService } from '../rooms/rooms.service';
 import { MailService } from '../mail/mail.service';
@@ -17,8 +19,18 @@ import {
   primaryPersonFields,
 } from '../common/person-form';
 import { unitNameCandidates } from '../units/units.service';
+import {
+  generateUploadToken,
+  uploadTokensMatch,
+} from '../common/upload-security';
 
 type RequestUser = { id: string; email: string; role: string };
+
+type DocAccessOpts = {
+  uploadToken?: string;
+  user?: RequestUser;
+};
+
 
 @Injectable()
 export class EnrollmentsService {
@@ -84,6 +96,7 @@ export class EnrollmentsService {
 
     // Sem sala escolhida → lista de espera directa
     if (!dto.roomId) {
+      const uploadCreds = generateUploadToken();
       const enrollment = await this.prisma.enrollment.create({
         data: {
           roomId: null,
@@ -92,6 +105,8 @@ export class EnrollmentsService {
           serviceId: service.id,
           ...personData,
           status: EnrollmentStatus.LISTA_ESPERA,
+          uploadTokenHash: uploadCreds.hash,
+          uploadTokenExpiresAt: uploadCreds.expiresAt,
         },
       });
 
@@ -122,6 +137,7 @@ export class EnrollmentsService {
         estado: 'lista_espera' as const,
         status: EnrollmentStatus.LISTA_ESPERA,
         vagas_disponiveis: 0,
+        uploadToken: uploadCreds.token,
         message:
           'Não existem salas disponíveis. A candidatura foi adicionada à lista de espera. Enviámos um email com o estado.',
       };
@@ -145,6 +161,7 @@ export class EnrollmentsService {
           ? EnrollmentStatus.PENDENTE_VALIDACAO
           : EnrollmentStatus.LISTA_ESPERA;
 
+      const uploadCreds = generateUploadToken();
       const enrollment = await tx.enrollment.create({
         data: {
           roomId: locked.id,
@@ -153,6 +170,8 @@ export class EnrollmentsService {
           serviceId: service.id,
           ...personData,
           status,
+          uploadTokenHash: uploadCreds.hash,
+          uploadTokenExpiresAt: uploadCreds.expiresAt,
         },
       });
 
@@ -211,6 +230,7 @@ export class EnrollmentsService {
           status === EnrollmentStatus.PENDENTE_VALIDACAO
             ? 'Candidatura registada. A vaga ficou reservada para validação. Enviámos um email de confirmação.'
             : 'Não existem vagas disponíveis nesta sala. A candidatura foi adicionada automaticamente à lista de espera. Enviámos um email com o estado.',
+        uploadToken: uploadCreds.token,
         enrollment,
         locked,
       };
@@ -289,7 +309,6 @@ export class EnrollmentsService {
             id: true,
             type: true,
             fileName: true,
-            filePath: true,
             mimeType: true,
             createdAt: true,
           },
@@ -848,6 +867,14 @@ export class EnrollmentsService {
     return this.prisma.enrollmentDocument.findMany({
       where: { enrollmentId },
       orderBy: { createdAt: 'desc' },
+      select: {
+        id: true,
+        type: true,
+        fileName: true,
+        mimeType: true,
+        createdAt: true,
+        // filePath omitido nas listagens — download via endpoint autenticado
+      },
     });
   }
 
@@ -856,6 +883,14 @@ export class EnrollmentsService {
     user: { id: string; email: string; role: string },
   ) {
     await this.assertCanAccessEnrollment(enrollmentId, user);
+    return this.listDocuments(enrollmentId);
+  }
+
+  async listDocumentsAuthorized(
+    enrollmentId: string,
+    opts: DocAccessOpts,
+  ) {
+    await this.assertDocumentAccess(enrollmentId, opts);
     return this.listDocuments(enrollmentId);
   }
 
@@ -900,12 +935,59 @@ export class EnrollmentsService {
     return enrollment;
   }
 
+  /**
+   * Acesso a documentos: JWT staff/encarregado OU uploadToken válido e não expirado.
+   * Respostas genéricas para não vazar existência da inscrição.
+   */
+  private async assertDocumentAccess(
+    enrollmentId: string,
+    opts: DocAccessOpts,
+  ) {
+    const denied = () =>
+      new ForbiddenException(
+        'Acesso não autorizado ao carregamento de documentos',
+      );
+
+    const enrollment = await this.prisma.enrollment.findUnique({
+      where: { id: enrollmentId },
+      select: {
+        id: true,
+        guardianEmail: true,
+        uploadTokenHash: true,
+        uploadTokenExpiresAt: true,
+      },
+    });
+    if (!enrollment) {
+      throw denied();
+    }
+
+    if (opts.user) {
+      try {
+        this.assertEnrollmentOwnership(enrollment, opts.user);
+        return enrollment;
+      } catch {
+        throw denied();
+      }
+    }
+
+    if (
+      uploadTokensMatch(opts.uploadToken, enrollment.uploadTokenHash) &&
+      enrollment.uploadTokenExpiresAt &&
+      enrollment.uploadTokenExpiresAt.getTime() > Date.now()
+    ) {
+      return enrollment;
+    }
+
+    throw denied();
+  }
+
   async addDocument(
     enrollmentId: string,
     file: Express.Multer.File,
     type: string,
+    opts: DocAccessOpts = {},
   ) {
-    await this.findOne(enrollmentId);
+    await this.assertDocumentAccess(enrollmentId, opts);
     if (!file) throw new BadRequestException('Ficheiro em falta');
 
     return this.prisma.enrollmentDocument.create({
@@ -916,7 +998,52 @@ export class EnrollmentsService {
         filePath: file.path.replace(/\\/g, '/'),
         mimeType: file.mimetype,
       },
+      select: {
+        id: true,
+        type: true,
+        fileName: true,
+        mimeType: true,
+        createdAt: true,
+      },
     });
+  }
+
+  async getDocumentFileForUser(
+    enrollmentId: string,
+    documentId: string,
+    user: RequestUser,
+  ) {
+    await this.assertCanAccessEnrollment(enrollmentId, user);
+    const doc = await this.prisma.enrollmentDocument.findFirst({
+      where: { id: documentId, enrollmentId },
+    });
+    if (!doc) throw new NotFoundException('Documento não encontrado');
+
+    const absolutePath = this.resolveDocumentAbsolutePath(doc.filePath);
+    if (!existsSync(absolutePath)) {
+      throw new NotFoundException('Ficheiro não encontrado');
+    }
+
+    return {
+      absolutePath,
+      fileName: doc.fileName || basename(absolutePath),
+      mimeType: doc.mimeType,
+    };
+  }
+
+  /** Resolve path do documento garantindo que fica sob uploads/documents. */
+  private resolveDocumentAbsolutePath(storedPath: string): string {
+    const docsRoot = resolve(process.env.UPLOAD_DIR || './uploads', 'documents');
+    const fileName = basename(storedPath.replace(/\\/g, '/'));
+    if (!fileName || fileName === '.' || fileName === '..') {
+      throw new ForbiddenException('Caminho de ficheiro inválido');
+    }
+    const candidate = resolve(docsRoot, fileName);
+    const docsPrefix = docsRoot.endsWith(sep) ? docsRoot : docsRoot + sep;
+    if (candidate !== docsRoot && !candidate.startsWith(docsPrefix)) {
+      throw new ForbiddenException('Caminho de ficheiro inválido');
+    }
+    return candidate;
   }
 
   async removeDocument(enrollmentId: string, documentId: string) {

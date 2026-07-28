@@ -87,7 +87,10 @@ import logo from "@/assets/logoPNG.png";
 import {
   api,
   SESSION_EXPIRED_EVENT,
+  hasLocalSessionFlag,
+  markLocalSession,
   uploadPublicUrl,
+  downloadEnrollmentDocument,
   type AcademicYear,
   type AccessProfile,
   type ActivityOffering,
@@ -510,7 +513,7 @@ export default function Platform({
   initialView?: View;
 }) {
   const [view, setView] = useState<View>(() => {
-    const existingToken = localStorage.getItem("by_access_token");
+    const existingToken = hasLocalSessionFlag();
     const existingModules = loadStoredModules();
     const existingRole = localStorage.getItem("by_user_role") || "";
     if (
@@ -544,13 +547,13 @@ export default function Platform({
     () => localStorage.getItem("by_user_role") || "",
   );
   const [modules, setModules] = useState<string[]>(() => loadStoredModules());
-  const [token, setToken] = useState(
-    () => localStorage.getItem("by_access_token"),
+  /** Flag de sessão UI — JWT real está em cookies HttpOnly. */
+  const [token, setToken] = useState<string | null>(() =>
+    hasLocalSessionFlag() ? "1" : null,
   );
 
   const clearAuth = () => {
-    localStorage.removeItem("by_access_token");
-    localStorage.removeItem("by_refresh_token");
+    void api.logout();
     localStorage.removeItem("by_user_name");
     localStorage.removeItem("by_user_role");
     localStorage.removeItem("by_user_modules");
@@ -568,8 +571,7 @@ export default function Platform({
     next: View,
     auth?: { modules?: string[]; loggedIn?: boolean; role?: string },
   ) => {
-    const loggedIn =
-      auth?.loggedIn ?? !!localStorage.getItem("by_access_token");
+    const loggedIn = auth?.loggedIn ?? hasLocalSessionFlag();
     const currentModules = auth?.modules ?? loadStoredModules();
     const currentRole =
       auth?.role ?? (localStorage.getItem("by_user_role") || userRole);
@@ -749,8 +751,7 @@ export default function Platform({
     let userModules = parseModules(result.user.modules);
     let role = result.user.role;
 
-    localStorage.setItem("by_access_token", result.accessToken);
-    localStorage.setItem("by_refresh_token", result.refreshToken);
+    markLocalSession();
     localStorage.setItem("by_user_name", result.user.name);
     localStorage.setItem("by_user_role", role);
     localStorage.setItem("by_user_modules", JSON.stringify(userModules));
@@ -776,7 +777,7 @@ export default function Platform({
           : (nav.find((item) => userModules.includes(item.id))?.id as View) ||
             "inscricoes";
 
-    setToken(result.accessToken);
+    setToken("1");
     setUserName(result.user.name);
     setUserRole(role);
     setModules(userModules);
@@ -1529,7 +1530,10 @@ function Enrollment({
           </p>
         )}
         <div className="mt-8 text-left">
-          <EnrollmentDocumentsPanel enrollmentId={submitted.id} />
+          <EnrollmentDocumentsPanel
+            enrollmentId={submitted.id}
+            uploadToken={submitted.uploadToken}
+          />
         </div>
         <Button className="mt-7" onClick={() => window.location.reload()}>
           Registar nova candidatura
@@ -1990,15 +1994,16 @@ function documentTypeLabel(type: string) {
 
 function EnrollmentDocumentsPanel({
   enrollmentId,
+  uploadToken,
 }: {
   enrollmentId: string;
+  uploadToken?: string;
 }) {
   const [documents, setDocuments] = useState<
     Array<{
       id: string;
       type: string;
       fileName: string;
-      filePath: string;
       mimeType?: string | null;
     }>
   >([]);
@@ -2011,7 +2016,7 @@ function EnrollmentDocumentsPanel({
   const load = () => {
     setLoading(true);
     api
-      .getEnrollmentDocuments(enrollmentId)
+      .getEnrollmentDocuments(enrollmentId, uploadToken)
       .then(setDocuments)
       .catch(() => setDocuments([]))
       .finally(() => setLoading(false));
@@ -2020,7 +2025,7 @@ function EnrollmentDocumentsPanel({
   useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [enrollmentId]);
+  }, [enrollmentId, uploadToken]);
 
   const upload = async () => {
     if (!file) {
@@ -2034,8 +2039,9 @@ function EnrollmentDocumentsPanel({
         enrollmentId,
         file,
         docType,
+        uploadToken,
       );
-      setDocuments((list) => [...list, { ...doc, filePath: "" }]);
+      setDocuments((list) => [...list, doc]);
       setFile(null);
       setMessage("Documento carregado com sucesso.");
     } catch (error) {
@@ -3996,15 +4002,26 @@ function PortalEncarregado({
                           <ul className="space-y-1">
                             {item.documents.map((doc) => (
                               <li key={doc.id}>
-                                <a
+                                <button
+                                  type="button"
                                   className="inline-flex items-center gap-2 text-sm text-primary underline-offset-2 hover:underline"
-                                  href={uploadPublicUrl(doc.filePath)}
-                                  target="_blank"
-                                  rel="noreferrer"
+                                  onClick={() => {
+                                    void downloadEnrollmentDocument(
+                                      item.id,
+                                      doc.id,
+                                      doc.fileName,
+                                    ).catch((err) => {
+                                      window.alert(
+                                        err instanceof Error
+                                          ? err.message
+                                          : "Não foi possível descarregar o documento.",
+                                      );
+                                    });
+                                  }}
                                 >
                                   <FileText className="h-4 w-4" />
                                   {documentTypeLabel(doc.type)} — {doc.fileName}
-                                </a>
+                                </button>
                               </li>
                             ))}
                           </ul>

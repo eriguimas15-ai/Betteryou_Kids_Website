@@ -446,6 +446,10 @@ model Enrollment {
   waitlistEntry        WaitlistEntry?
   documents            EnrollmentDocument[]
   student              Student?
+  /// Hash SHA-256 do token de upload (candidatura pública). Nunca expor em claro.
+  uploadTokenHash      String?
+  /// Expiração do token de upload (tipicamente 48h após criação).
+  uploadTokenExpiresAt DateTime?
 
   @@index([status])
   @@index([guardianEmail])

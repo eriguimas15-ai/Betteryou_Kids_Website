@@ -26,12 +26,17 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
 import { CmsService } from './cms.service';
 import { Roles } from '../common/decorators/roles.decorator';
 import { Public } from '../common/decorators/public.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import {
+  CMS_MEDIA_LIMITS,
+  multerUploadFilter,
+  uniqueSafeFilename,
+} from '../common/upload-security';
 
 class SectionDto {
   @IsString()
@@ -308,11 +313,15 @@ export class CmsController {
       storage: diskStorage({
         destination: uploadDir,
         filename: (_req, file, cb) => {
-          const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-          cb(null, `${unique}${extname(file.originalname)}`);
+          try {
+            cb(null, uniqueSafeFilename(file.originalname));
+          } catch (err) {
+            cb(err instanceof Error ? err : new Error('Ficheiro inválido'), '');
+          }
         },
       }),
-      limits: { fileSize: 5 * 1024 * 1024 },
+      fileFilter: multerUploadFilter,
+      limits: CMS_MEDIA_LIMITS,
     }),
   )
   upload(

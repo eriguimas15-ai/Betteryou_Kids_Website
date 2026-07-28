@@ -2,12 +2,25 @@ export const API_BASE =
   import.meta.env.VITE_API_URL?.replace(/\/$/, "") ||
   "http://localhost:3001/api";
 
-/** Base do servidor (sem /api) — ficheiros estáticos em /uploads. */
+/** Base do servidor (sem /api) — media CMS/galeria pública em /uploads. */
 export const API_ORIGIN = API_BASE.replace(/\/api\/?$/, "");
 
-/** Converte filePath guardado na API num URL público de download. */
+/**
+ * URL público para media CMS/galeria (não usar para documentos de inscrição).
+ * Documentos sensíveis: `downloadEnrollmentDocument`.
+ */
 export function uploadPublicUrl(filePath: string): string {
   const normalized = filePath.replace(/\\/g, "/");
+  // Nunca construir URL directa para documentos privados
+  if (
+    normalized.includes("/uploads/documents/") ||
+    normalized.includes("uploads/documents/") ||
+    /(?:^|\/)documents\//.test(normalized)
+  ) {
+    console.warn(
+      "uploadPublicUrl: documentos de inscrição devem usar downloadEnrollmentDocument",
+    );
+  }
   const uploadsIdx = normalized.indexOf("/uploads/");
   if (uploadsIdx >= 0) {
     return `${API_ORIGIN}${normalized.slice(uploadsIdx)}`;
@@ -17,17 +30,69 @@ export function uploadPublicUrl(filePath: string): string {
     return `${API_ORIGIN}/${normalized.slice(relativeIdx)}`;
   }
   const name = normalized.split("/").pop() || normalized;
-  return `${API_ORIGIN}/uploads/documents/${name}`;
+  return `${API_ORIGIN}/uploads/${name}`;
+}
+
+/** URL do endpoint autenticado de download de documento de inscrição. */
+export function enrollmentDocumentApiPath(
+  enrollmentId: string,
+  documentId: string,
+): string {
+  return `${API_BASE}/enrollments/${enrollmentId}/documents/${documentId}/file`;
+}
+
+/** Flag local não secreto — a sessão real vive em cookies HttpOnly. */
+export const SESSION_FLAG_KEY = "by_session";
+
+/** Descarrega documento de inscrição com JWT em cookie (blob URL temporário). */
+export async function downloadEnrollmentDocument(
+  enrollmentId: string,
+  documentId: string,
+  fileName?: string,
+): Promise<void> {
+  const res = await fetch(enrollmentDocumentApiPath(enrollmentId, documentId), {
+    credentials: "include",
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(
+      (data as { message?: string }).message ||
+        "Não foi possível descarregar o documento",
+    );
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fileName || "documento";
+  a.rel = "noreferrer";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
 }
 
 /** Disparado quando o access/refresh token deixam de ser válidos. */
 export const SESSION_EXPIRED_EVENT = "by:session-expired";
 
+export function hasLocalSessionFlag(): boolean {
+  return localStorage.getItem(SESSION_FLAG_KEY) === "1";
+}
+
+export function markLocalSession() {
+  localStorage.setItem(SESSION_FLAG_KEY, "1");
+  // Limpar tokens legados (pré-SEC-06)
+  localStorage.removeItem("by_access_token");
+  localStorage.removeItem("by_refresh_token");
+}
+
 function clearSessionStorage() {
+  localStorage.removeItem(SESSION_FLAG_KEY);
   localStorage.removeItem("by_access_token");
   localStorage.removeItem("by_refresh_token");
   localStorage.removeItem("by_user_name");
   localStorage.removeItem("by_user_role");
+  localStorage.removeItem("by_user_modules");
 }
 
 function expireSession() {
@@ -37,28 +102,24 @@ function expireSession() {
   }
 }
 
-async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = localStorage.getItem("by_refresh_token");
-  if (!refreshToken) return null;
+/** Renova cookies via refresh HttpOnly; devolve true se OK. */
+async function refreshAccessToken(): Promise<boolean> {
   try {
     const response = await fetch(`${API_BASE}/auth/refresh`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ refreshToken }),
+      credentials: "include",
+      body: JSON.stringify({}),
     });
-    const data = await response.json().catch(() => ({}));
     if (!response.ok) {
       clearSessionStorage();
-      return null;
+      return false;
     }
-    localStorage.setItem("by_access_token", data.accessToken);
-    if (data.refreshToken) {
-      localStorage.setItem("by_refresh_token", data.refreshToken);
-    }
-    return data.accessToken as string;
+    markLocalSession();
+    return true;
   } catch {
     clearSessionStorage();
-    return null;
+    return false;
   }
 }
 
@@ -67,18 +128,15 @@ async function request<T>(
   options: RequestInit = {},
   retried = false,
 ): Promise<T> {
-  const token = localStorage.getItem("by_access_token");
   const headers: HeadersInit = {
     "Content-Type": "application/json",
     ...(options.headers || {}),
   };
-  if (token) {
-    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
-  }
 
   const response = await fetch(`${API_BASE}${path}`, {
     ...options,
     headers,
+    credentials: "include",
   });
 
   const isAuthCredentialPath =
@@ -88,8 +146,8 @@ async function request<T>(
     path.startsWith("/auth/logout");
 
   if (response.status === 401 && !retried && !isAuthCredentialPath) {
-    const nextToken = await refreshAccessToken();
-    if (nextToken) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
       return request<T>(path, options, true);
     }
     expireSession();
@@ -134,17 +192,13 @@ async function downloadFile(
   fallbackName: string,
   retried = false,
 ): Promise<void> {
-  const token = localStorage.getItem("by_access_token");
-  const headers: HeadersInit = {};
-  if (token) {
-    (headers as Record<string, string>)["Authorization"] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_BASE}${path}`, { headers });
+  const response = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+  });
 
   if (response.status === 401 && !retried) {
-    const nextToken = await refreshAccessToken();
-    if (nextToken) return downloadFile(path, fallbackName, true);
+    const refreshed = await refreshAccessToken();
+    if (refreshed) return downloadFile(path, fallbackName, true);
     expireSession();
     throw new Error("Sessão expirada. Entre novamente para continuar.");
   }
@@ -183,7 +237,9 @@ async function downloadFile(
 }
 
 async function publicFetch<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`);
+  const response = await fetch(`${API_BASE}${path}`, {
+    credentials: "include",
+  });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const message =
@@ -515,16 +571,36 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
-  login: (email: string, password: string) =>
-    request<LoginResult>("/auth/login", {
+  login: async (email: string, password: string) => {
+    const result = await request<LoginResult>("/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
-    }),
-  register: (body: { name: string; email: string; password: string }) =>
-    request<LoginResult>("/auth/register", {
+    });
+    markLocalSession();
+    return result;
+  },
+  register: async (body: { name: string; email: string; password: string }) => {
+    const result = await request<LoginResult>("/auth/register", {
       method: "POST",
       body: JSON.stringify(body),
-    }),
+    });
+    markLocalSession();
+    return result;
+  },
+  logout: async () => {
+    clearSessionStorage();
+    try {
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({}),
+      });
+    } catch {
+      // cookies podem já ter expirado
+    }
+    return { ok: true as const };
+  },
   getStudents: () => request<Student[]>("/students"),
   getStudent: (id: string) => request<Student>(`/students/${id}`),
   updateStudentFicha: (id: string, body: StudentFichaPayload) =>
@@ -578,30 +654,35 @@ export const api = {
     enrollmentId: string,
     file: File,
     type: string,
+    uploadToken?: string,
   ) => {
     const form = new FormData();
     form.append("file", file);
     form.append("type", type);
-    const token = localStorage.getItem("by_access_token");
+    if (uploadToken) form.append("uploadToken", uploadToken);
     const res = await fetch(`${API_BASE}/enrollments/${enrollmentId}/documents`, {
       method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
       body: form,
     });
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.message || "Upload falhou");
     return data as { id: string; type: string; fileName: string };
   },
-  getEnrollmentDocuments: (enrollmentId: string) =>
+  getEnrollmentDocuments: (enrollmentId: string, uploadToken?: string) =>
     request<
       Array<{
         id: string;
         type: string;
         fileName: string;
-        filePath: string;
         mimeType?: string | null;
+        createdAt?: string;
       }>
-    >(`/enrollments/${enrollmentId}/documents`),
+    >(
+      uploadToken
+        ? `/enrollments/${enrollmentId}/documents?uploadToken=${encodeURIComponent(uploadToken)}`
+        : `/enrollments/${enrollmentId}/documents`,
+    ),
   getClasses: (academicYearId?: string) =>
     request<ClassGroup[]>(
       academicYearId ? `/classes?academicYearId=${academicYearId}` : "/classes",
@@ -1329,10 +1410,9 @@ export const api = {
     form.append("file", file);
     if (altText) form.append("altText", altText);
     if (category) form.append("category", category);
-    const token = localStorage.getItem("by_access_token");
     const res = await fetch(`${API_BASE}/cms/admin/media`, {
       method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      credentials: "include",
       body: form,
     });
     const data = await res.json().catch(() => ({}));
@@ -1874,6 +1954,8 @@ export type EnrollmentResult = {
   status: string;
   vagas_disponiveis: number;
   message: string;
+  /** Token de curta duração para upload de documentos na candidatura pública. */
+  uploadToken?: string;
   room?: { id: string; name: string };
 };
 
@@ -1954,7 +2036,8 @@ export type EnrollmentDocumentMeta = {
   id: string;
   type: string;
   fileName: string;
-  filePath: string;
+  /** @deprecated Não usar URL estática — descarregar via downloadEnrollmentDocument */
+  filePath?: string;
   mimeType?: string | null;
   createdAt?: string;
 };

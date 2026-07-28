@@ -7,20 +7,30 @@ import {
   Patch,
   Post,
   Query,
+  Res,
+  StreamableFile,
   UploadedFile,
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBearerAuth, ApiBody, ApiConsumes, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { EnrollmentStatus, Role } from '@prisma/client';
 import { diskStorage } from 'multer';
-import { extname, join } from 'path';
+import { createReadStream } from 'fs';
+import { join } from 'path';
 import { existsSync, mkdirSync } from 'fs';
+import type { Response } from 'express';
 import { EnrollmentsService } from './enrollments.service';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
 import { Public } from '../common/decorators/public.decorator';
 import { Roles } from '../common/decorators/roles.decorator';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
+import {
+  ENROLLMENT_DOC_LIMITS,
+  multerUploadFilter,
+  uniqueSafeFilename,
+} from '../common/upload-security';
 
 const docsDir = join(process.env.UPLOAD_DIR || './uploads', 'documents');
 if (!existsSync(docsDir)) mkdirSync(docsDir, { recursive: true });
@@ -31,6 +41,7 @@ export class EnrollmentsController {
   constructor(private enrollments: EnrollmentsService) {}
 
   @Public()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post()
   create(@Body() dto: CreateEnrollmentDto) {
     return this.enrollments.create(dto);
@@ -95,7 +106,12 @@ export class EnrollmentsController {
     return this.enrollments.reject(id, user);
   }
 
+  /**
+   * Upload de documentos da candidatura.
+   * Público com uploadToken (emitido no create) OU JWT com ownership/staff.
+   */
   @Public()
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
   @Post(':id/documents')
   @ApiConsumes('multipart/form-data')
   @ApiBody({
@@ -104,6 +120,7 @@ export class EnrollmentsController {
       properties: {
         file: { type: 'string', format: 'binary' },
         type: { type: 'string' },
+        uploadToken: { type: 'string' },
       },
     },
   })
@@ -112,21 +129,49 @@ export class EnrollmentsController {
       storage: diskStorage({
         destination: docsDir,
         filename: (_req, file, cb) => {
-          const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
-          cb(null, `${unique}${extname(file.originalname)}`);
+          try {
+            cb(null, uniqueSafeFilename(file.originalname));
+          } catch (err) {
+            cb(err instanceof Error ? err : new Error('Ficheiro inválido'), '');
+          }
         },
       }),
-      limits: { fileSize: 8 * 1024 * 1024 },
+      fileFilter: multerUploadFilter,
+      limits: ENROLLMENT_DOC_LIMITS,
     }),
   )
   uploadDocument(
     @Param('id') id: string,
     @UploadedFile() file: Express.Multer.File,
     @Body('type') type: string,
+    @Body('uploadToken') uploadToken: string,
+    @CurrentUser()
+    user: { id: string; email: string; role: string } | null,
   ) {
-    return this.enrollments.addDocument(id, file, type);
+    return this.enrollments.addDocument(id, file, type, {
+      uploadToken,
+      user: user ?? undefined,
+    });
   }
 
+  /**
+   * Lista documentos: JWT (staff/encarregado) ou uploadToken da candidatura.
+   */
+  @Public()
+  @Get(':id/documents')
+  listDocuments(
+    @Param('id') id: string,
+    @Query('uploadToken') uploadToken: string | undefined,
+    @CurrentUser()
+    user: { id: string; email: string; role: string } | null,
+  ) {
+    return this.enrollments.listDocumentsAuthorized(id, {
+      uploadToken,
+      user: user ?? undefined,
+    });
+  }
+
+  /** Download autenticado de documento sensível (não servir via /uploads estático). */
   @ApiBearerAuth()
   @Roles(
     Role.ADMIN,
@@ -135,13 +180,27 @@ export class EnrollmentsController {
     Role.COMUNICACAO,
     Role.ENCARREGADO,
   )
-  @Get(':id/documents')
-  listDocuments(
+  @Get(':id/documents/:documentId/file')
+  async downloadDocument(
     @Param('id') id: string,
+    @Param('documentId') documentId: string,
     @CurrentUser()
     user: { id: string; email: string; role: string },
+    @Res({ passthrough: true }) res: Response,
   ) {
-    return this.enrollments.listDocumentsForUser(id, user);
+    const doc = await this.enrollments.getDocumentFileForUser(
+      id,
+      documentId,
+      user,
+    );
+    res.setHeader('Content-Type', doc.mimeType || 'application/octet-stream');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename*=UTF-8''${encodeURIComponent(doc.fileName)}`,
+    );
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Cache-Control', 'private, no-store');
+    return new StreamableFile(createReadStream(doc.absolutePath));
   }
 
   @ApiBearerAuth()

@@ -73,6 +73,9 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string) {
+    if (!refreshToken?.trim()) {
+      throw new UnauthorizedException('Refresh token inválido ou expirado');
+    }
     const tokenHash = this.hashToken(refreshToken);
     const stored = await this.prisma.refreshToken.findUnique({
       where: { tokenHash },

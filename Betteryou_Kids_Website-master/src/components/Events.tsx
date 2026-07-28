@@ -75,9 +75,9 @@ const Events = () => {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-primary mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold text-primary mb-6">
             Eventos e Festas
-          </h2>
+          </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Festas, passeios e workshops para as nossas crianças e famílias.
             Consulte a agenda e inscreva-se através do portal do encarregado.

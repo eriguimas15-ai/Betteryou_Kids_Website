@@ -175,9 +175,9 @@ const Gallery = () => {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-primary mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold text-primary mb-6">
             Galeria
-          </h2>
+          </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Explore nossos espaços, actividades e momentos especiais através de 
             fotos e vídeos que capturam a essência da Betteryou Kids.

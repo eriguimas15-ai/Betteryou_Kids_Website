@@ -5,8 +5,17 @@
 ### API (`escola-api/.env`)
 - `DATABASE_URL` - ligação MySQL.
 - `JWT_SECRET` - segredo de autenticação.
-- `JWT_REFRESH_SECRET` - segredo refresh token.
+- `JWT_REFRESH_SECRET` - segredo refresh token (legado; refresh usa hash na BD).
+- `JWT_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN` - duração dos cookies (ex.: `15m`, `7d`).
+- `CORS_ORIGIN` - lista de origens do frontend (vírgula). **Nunca** usar `*` com cookies.
+- `COOKIE_SECURE` - `true`/`false` para o flag `Secure` nos cookies HttpOnly. Em produção, omissão = `true`.
+- `SWAGGER_ENABLED` - `true` para forçar Swagger; `false` para desactivar. Em produção, omissão = desactivado.
 - `PUBLIC_APP_URL` - URL pública do frontend (usada em links de email).
+
+### Autenticação (SEC-06)
+- Access e refresh JWT são emitidos como cookies HttpOnly (`by_access_token`, `by_refresh_token`), `SameSite=Lax`, `Secure` conforme `COOKIE_SECURE`.
+- O frontend deve chamar a API com `credentials: 'include'` e **não** guardar tokens em `localStorage`.
+- `Authorization: Bearer` continua válido (Swagger / testes / clientes API).
 
 ### Email (SMTP)
 - `SMTP_HOST`

@@ -873,8 +873,9 @@ export class DashboardService {
 
     for (const a of assessments) {
       if (a.gradeType === 'NUMERICA' && a.gradeValue != null) {
+        const gradeValue = a.gradeValue;
         const band = numericBands.find(
-          (b) => a.gradeValue >= b.min && a.gradeValue <= b.max,
+          (b) => gradeValue >= b.min && gradeValue <= b.max,
         );
         if (band) {
           const index = numericDistribution.findIndex((x) => x.band === band.key);

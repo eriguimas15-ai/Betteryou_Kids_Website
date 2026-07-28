@@ -182,9 +182,9 @@ const Activities = () => {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-primary mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold text-primary mb-6">
             Actividades Extracurriculares
-          </h2>
+          </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Um programa rico e diversificado que estimula diferentes habilidades 
             e talentos, promovendo o desenvolvimento integral das crianças.

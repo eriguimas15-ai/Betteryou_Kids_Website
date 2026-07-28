@@ -181,9 +181,9 @@ const Services = () => {
       <div className="container mx-auto px-4">
         {/* Header */}
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-primary mb-6">
+          <h1 className="text-4xl md:text-5xl font-bold text-primary mb-6">
             Nossos Serviços
-          </h2>
+          </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
             Oferecemos modalidades educativas adaptadas a cada faixa etária, 
             garantindo o desenvolvimento integral de cada criança.

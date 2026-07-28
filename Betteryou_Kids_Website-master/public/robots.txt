@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /plataforma
+Disallow: /dashboard
+Disallow: /inscricoes
+
+Sitemap: https://betteryoukids.com/sitemap.xml

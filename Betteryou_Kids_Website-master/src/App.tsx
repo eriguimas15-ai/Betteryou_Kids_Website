@@ -3,9 +3,11 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { HelmetProvider } from "react-helmet-async";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import PageTransition from "@/components/PageTransition";
+import { PageSeo, PUBLIC_PAGE_SEO } from "@/components/PageSeo";
 import Home from "@/pages/Home";
 import About from "@/pages/About";
 import Services from "@/pages/Services";
@@ -19,11 +21,41 @@ import Platform from "@/pages/Platform";
 
 const queryClient = new QueryClient();
 
+const RouteSeo = () => {
+  const { pathname } = useLocation();
+  const meta = PUBLIC_PAGE_SEO[pathname];
+  if (!meta) {
+    return (
+      <PageSeo
+        title="Página não encontrada"
+        description="A página pedida não existe no site Betteryou Kids."
+        path={pathname}
+        noindex
+      />
+    );
+  }
+  const isPrivate =
+    pathname === "/plataforma" ||
+    pathname === "/dashboard" ||
+    pathname === "/inscricoes";
+  return (
+    <PageSeo
+      title={meta.title}
+      description={meta.description}
+      path={pathname}
+      noindex={isPrivate}
+    />
+  );
+};
+
 const SiteRoutes = () => {
-  const isPlatform = ["/plataforma", "/inscricoes", "/dashboard"].includes(useLocation().pathname);
+  const isPlatform = ["/plataforma", "/inscricoes", "/dashboard"].includes(
+    useLocation().pathname,
+  );
 
   return (
     <div className="min-h-screen bg-background">
+      <RouteSeo />
       {!isPlatform && <Header />}
       <main>
         <Routes>
@@ -47,15 +79,17 @@ const SiteRoutes = () => {
 };
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <SiteRoutes />
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
+  <HelmetProvider>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <SiteRoutes />
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  </HelmetProvider>
 );
 
 export default App;

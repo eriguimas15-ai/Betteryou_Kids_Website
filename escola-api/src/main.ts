@@ -3,19 +3,41 @@ import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import type { IncomingMessage, ServerResponse } from 'http';
+import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
+
+function swaggerEnabled(): boolean {
+  const flag = process.env.SWAGGER_ENABLED;
+  if (flag === 'true' || flag === '1') return true;
+  if (flag === 'false' || flag === '0') return false;
+  return process.env.NODE_ENV !== 'production';
+}
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   const origins = (process.env.CORS_ORIGIN || 'http://localhost:8080')
     .split(',')
-    .map((o) => o.trim());
+    .map((o) => o.trim())
+    .filter(Boolean);
 
   app.enableCors({
-    origin: origins,
+    origin: origins.length === 1 ? origins[0] : origins,
     credentials: true,
   });
+
+  app.use(cookieParser());
+
+  // SEC-05: cabeçalhos de segurança HTTP (API; CSP desactivado para não quebrar Swagger/SPA)
+  app.use(
+    helmet({
+      contentSecurityPolicy: false,
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      crossOriginOpenerPolicy: { policy: 'same-origin-allow-popups' },
+    }),
+  );
 
   app.setGlobalPrefix('api');
   app.useGlobalPipes(
@@ -26,22 +48,41 @@ async function bootstrap() {
     }),
   );
 
+  // SEC-02: bloquear acesso estático a documentos sensíveis
+  app.use('/uploads/documents', (_req: IncomingMessage, res: ServerResponse) => {
+    res.statusCode = 404;
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.end(
+      JSON.stringify({
+        message: 'Documento indisponível. Utilize o endpoint autenticado.',
+      }),
+    );
+  });
+
+  // Media CMS / galeria pública continua acessível sob /uploads (excepto /documents)
   app.useStaticAssets(join(process.cwd(), process.env.UPLOAD_DIR || 'uploads'), {
     prefix: '/uploads',
   });
 
-  const swagger = new DocumentBuilder()
-    .setTitle('BetterYou Kids API')
-    .setDescription('API da plataforma escolar BetterYou Kids')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, swagger));
+  if (swaggerEnabled()) {
+    const swagger = new DocumentBuilder()
+      .setTitle('BetterYou Kids API')
+      .setDescription('API da plataforma escolar BetterYou Kids')
+      .setVersion('1.0')
+      .addBearerAuth()
+      .addCookieAuth('by_access_token')
+      .build();
+    SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, swagger));
+  }
 
   const port = Number(process.env.PORT || 3001);
   await app.listen(port);
   console.log(`BetterYou Kids API em http://localhost:${port}/api`);
-  console.log(`Swagger em http://localhost:${port}/docs`);
+  if (swaggerEnabled()) {
+    console.log(`Swagger em http://localhost:${port}/docs`);
+  } else {
+    console.log('Swagger desactivado (produção ou SWAGGER_ENABLED=false)');
+  }
 }
 
 bootstrap();
