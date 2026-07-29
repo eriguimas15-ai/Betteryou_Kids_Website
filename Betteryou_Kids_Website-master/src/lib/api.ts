@@ -2019,8 +2019,9 @@ export type PlatformSettings = {
 };
 
 export type LoginResult = {
-  accessToken: string;
-  refreshToken: string;
+  /** Só presente se a API tiver SWAGGER_RETURN_TOKENS=true; o SPA usa cookies. */
+  accessToken?: string;
+  refreshToken?: string;
   user: {
     id: string;
     email: string;

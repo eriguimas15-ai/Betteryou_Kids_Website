@@ -21,6 +21,8 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:seed": "prisma db seed",
+    "smoke:roles": "node scripts/smoke-roles.mjs",
+    "smoke:crud": "node scripts/smoke-crud.mjs",
     "db:up": "docker compose up -d",
     "db:setup": "docker compose up -d && prisma migrate dev --name init && prisma db seed"
   },

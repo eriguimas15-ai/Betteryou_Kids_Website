@@ -57,22 +57,23 @@ const Header = () => {
         <div className="container mx-auto px-4">
           <div className="flex justify-between items-center py-4">
             {/* Logo */}
-            <div className="flex items-center">
+            <Link to="/" className="flex items-center" aria-label="Betteryou Kids — início">
               <img 
                 src={logo}
-                alt="Betteryou Kids Logo" 
+                alt="Betteryou Kids" 
                 className="h-24 w-auto"
               />
-            </div>
+            </Link>
 
             {/* Desktop Navigation */}
-            <nav className="hidden lg:flex items-center space-x-8">
+            <nav className="hidden lg:flex items-center space-x-8" aria-label="Navegação principal">
               {navigation.map((item) => {
                 const isActive = location.pathname === item.href;
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
+                    aria-current={isActive ? "page" : undefined}
                     className={`${
                       isScrolled || !isHomePage ? 'text-foreground' : 'text-white'
                     } hover:text-primary transition-colors duration-200 font-medium relative ${
@@ -100,19 +101,23 @@ const Header = () => {
 
             {/* Mobile Menu Button */}
             <button
+              type="button"
               onClick={() => setIsMenuOpen(!isMenuOpen)}
+              aria-expanded={isMenuOpen}
+              aria-controls="mobile-nav"
+              aria-label={isMenuOpen ? "Fechar menu" : "Abrir menu"}
               className={`lg:hidden p-2 rounded-md ${
                 isScrolled || !isHomePage ? 'text-foreground' : 'text-white'
               } hover:text-primary transition-colors duration-200`}
             >
-              {isMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {isMenuOpen ? <X className="h-6 w-6" aria-hidden /> : <Menu className="h-6 w-6" aria-hidden />}
             </button>
           </div>
 
           {/* Mobile Navigation */}
           {isMenuOpen && (
-            <div className="lg:hidden border-t py-4">
-              <nav className="flex flex-col space-y-4">
+            <div id="mobile-nav" className="lg:hidden border-t py-4">
+              <nav className="flex flex-col space-y-4" aria-label="Navegação móvel">
                 {navigation.map((item) => {
                   const isActive = location.pathname === item.href;
                   return (
@@ -120,6 +125,7 @@ const Header = () => {
                       key={item.name}
                       to={item.href}
                       onClick={() => setIsMenuOpen(false)}
+                      aria-current={isActive ? "page" : undefined}
                       className={`text-foreground hover:text-primary transition-colors duration-200 font-medium py-2 ${
                         isActive ? 'text-primary font-semibold' : ''
                       }`}

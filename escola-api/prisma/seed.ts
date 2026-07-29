@@ -204,6 +204,11 @@ async function main() {
         'comunicados',
       ],
     },
+    {
+      systemKey: 'ENCARREGADO',
+      name: 'Encarregado de educação',
+      modules: ['portal', 'inscricoes', 'renovacoes', 'ficha'],
+    },
   ];
 
   for (const def of profileDefs) {
@@ -225,6 +230,15 @@ async function main() {
   const comProfile = await prisma.accessProfile.findUnique({
     where: { systemKey: 'COMUNICACAO' },
   });
+  const direcaoProfile = await prisma.accessProfile.findUnique({
+    where: { systemKey: 'DIRECAO' },
+  });
+  const coordenacaoProfile = await prisma.accessProfile.findUnique({
+    where: { systemKey: 'COORDENACAO' },
+  });
+  const encarregadoProfile = await prisma.accessProfile.findUnique({
+    where: { systemKey: 'ENCARREGADO' },
+  });
   if (adminProfile) {
     await prisma.user.update({
       where: { id: admin.id },
@@ -237,6 +251,61 @@ async function main() {
       data: { accessProfileId: comProfile.id },
     });
   }
+
+  // Contas de teste (upsert não destrutivo; passwords conhecidas para smoke)
+  const direcaoHash = await bcrypt.hash('Direcao123!', 12);
+  await prisma.user.upsert({
+    where: { email: 'direcao@betteryoukids.com' },
+    update: {
+      passwordHash: direcaoHash,
+      role: Role.DIRECAO,
+      accessProfileId: direcaoProfile?.id ?? null,
+      name: 'Direcção (teste)',
+    },
+    create: {
+      name: 'Direcção (teste)',
+      email: 'direcao@betteryoukids.com',
+      passwordHash: direcaoHash,
+      role: Role.DIRECAO,
+      accessProfileId: direcaoProfile?.id ?? null,
+    },
+  });
+
+  const coordHash = await bcrypt.hash('Coordena123!', 12);
+  await prisma.user.upsert({
+    where: { email: 'coordenacao@betteryoukids.com' },
+    update: {
+      passwordHash: coordHash,
+      role: Role.COORDENACAO,
+      accessProfileId: coordenacaoProfile?.id ?? null,
+      name: 'Coordenação (teste)',
+    },
+    create: {
+      name: 'Coordenação (teste)',
+      email: 'coordenacao@betteryoukids.com',
+      passwordHash: coordHash,
+      role: Role.COORDENACAO,
+      accessProfileId: coordenacaoProfile?.id ?? null,
+    },
+  });
+
+  const encHash = await bcrypt.hash('Encarrega123!', 12);
+  await prisma.user.upsert({
+    where: { email: 'encarregado@betteryoukids.com' },
+    update: {
+      passwordHash: encHash,
+      role: Role.ENCARREGADO,
+      accessProfileId: encarregadoProfile?.id ?? null,
+      name: 'Encarregado (teste)',
+    },
+    create: {
+      name: 'Encarregado (teste)',
+      email: 'encarregado@betteryoukids.com',
+      passwordHash: encHash,
+      role: Role.ENCARREGADO,
+      accessProfileId: encarregadoProfile?.id ?? null,
+    },
+  });
 
   await prisma.jobOpening.upsert({
     where: { id: 'seed-job-educador' },
@@ -1411,6 +1480,9 @@ async function main() {
   console.log('Seed concluído.');
   console.log('Admin: admin@betteryoukids.com / Admin123!');
   console.log('Comunicação: comunicacao@betteryoukids.com / Comunica123!');
+  console.log('Direcção: direcao@betteryoukids.com / Direcao123!');
+  console.log('Coordenação: coordenacao@betteryoukids.com / Coordena123!');
+  console.log('Encarregado: encarregado@betteryoukids.com / Encarrega123!');
 }
 
 main()

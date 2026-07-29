@@ -7,6 +7,11 @@
       name="description"
       content="Educação infantil afectiva e inovadora: creche, pré-escolar e 1.º ciclo com amor, natureza e criatividade."
     />
+    <!-- CSP: em `npm run dev` fica Report-Only (plugin Vite); em `npm run build` passa a enforce. -->
+    <meta
+      http-equiv="Content-Security-Policy-Report-Only"
+      content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http://localhost:3001 http://127.0.0.1:3001; font-src 'self' data:; connect-src 'self' ws: wss: http://localhost:3001 http://127.0.0.1:3001 https:; media-src 'self' blob:; frame-src 'self' https://www.google.com https://maps.google.com; frame-ancestors 'self'; base-uri 'self'; form-action 'self'"
+    />
     <title>Betteryou Kids</title>
   </head>
   <body>

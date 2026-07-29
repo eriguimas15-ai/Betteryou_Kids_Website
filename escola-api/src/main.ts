@@ -15,7 +15,41 @@ function swaggerEnabled(): boolean {
   return process.env.NODE_ENV !== 'production';
 }
 
+function warnProductionHardening() {
+  if (process.env.NODE_ENV !== 'production') return;
+
+  const weakSecrets = ['change-me', 'change-me-too', 'secret', 'jwt-secret'];
+  const jwt = (process.env.JWT_SECRET || '').trim();
+  const refresh = (process.env.JWT_REFRESH_SECRET || '').trim();
+
+  if (!jwt || jwt.length < 32 || weakSecrets.includes(jwt.toLowerCase())) {
+    console.warn(
+      '[SECURITY] JWT_SECRET fraco ou em falta em produção — use um segredo longo e aleatório.',
+    );
+  }
+  if (
+    refresh &&
+    (refresh.length < 32 || weakSecrets.includes(refresh.toLowerCase()))
+  ) {
+    console.warn(
+      '[SECURITY] JWT_REFRESH_SECRET fraco em produção — use um segredo longo e aleatório.',
+    );
+  }
+  if (swaggerEnabled()) {
+    console.warn(
+      '[SECURITY] Swagger activo em produção (/docs). Defina SWAGGER_ENABLED=false salvo necessidade explícita.',
+    );
+  }
+  if ((process.env.CORS_ORIGIN || '').includes('*')) {
+    console.warn(
+      '[SECURITY] CORS_ORIGIN contém "*" — incompatível com cookies credentials.',
+    );
+  }
+}
+
 async function bootstrap() {
+  warnProductionHardening();
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   const origins = (process.env.CORS_ORIGIN || 'http://localhost:8080')

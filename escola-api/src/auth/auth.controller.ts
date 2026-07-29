@@ -21,6 +21,7 @@ import {
   readRefreshToken,
   setAuthCookies,
 } from './auth-cookies';
+import { toAuthClientBody } from './auth-response';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -39,8 +40,8 @@ export class AuthController {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
     });
-    // Tokens também no corpo para Swagger/testes; o frontend usa cookies HttpOnly.
-    return result;
+    // SPA: cookies HttpOnly apenas. Tokens no JSON só com SWAGGER_RETURN_TOKENS=true.
+    return toAuthClientBody(result);
   }
 
   @Public()
@@ -55,7 +56,7 @@ export class AuthController {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
     });
-    return result;
+    return toAuthClientBody(result);
   }
 
   @Public()
@@ -76,7 +77,7 @@ export class AuthController {
       accessToken: result.accessToken,
       refreshToken: result.refreshToken,
     });
-    return result;
+    return toAuthClientBody(result);
   }
 
   @Public()
