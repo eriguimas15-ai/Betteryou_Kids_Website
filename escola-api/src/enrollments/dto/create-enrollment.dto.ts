@@ -1,8 +1,10 @@
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsDateString,
   IsEmail,
+  IsObject,
   IsOptional,
   IsString,
   MinLength,
@@ -168,4 +170,11 @@ export class CreateEnrollmentDto {
   @IsArray()
   @IsString({ each: true })
   activities?: string[];
+
+  @IsOptional()
+  @IsObject()
+  formExtras?: Record<string, unknown>;
+
+  @IsBoolean()
+  parentConfirmationAccepted: boolean;
 }

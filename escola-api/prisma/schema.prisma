@@ -435,6 +435,8 @@ model Enrollment {
   guardians            Json?
   emergencyContacts    Json?
   activities           Json?
+  /// Campos adicionais dos formulários Google (pai/mãe, autorizações, etc.)
+  formExtras           Json?
   status               EnrollmentStatus     @default(PENDENTE_VALIDACAO)
   priority             Int                  @default(0)
   createdAt            DateTime             @default(now())
@@ -617,6 +619,7 @@ model Renewal {
   guardians            Json?
   emergencyContacts    Json?
   activities           Json?
+  formExtras           Json?
   previousYearLabel    String?
   notes                String?        @db.Text
   status               RenewalStatus  @default(PENDENTE)
@@ -704,6 +707,8 @@ model PlatformSettings {
   smsApiUrl             String?
   /// Remetente/from padrão (opcional, pode vir de env).
   smsFrom               String?
+  /// Perguntas dos formulários de inscrição/renovação por serviço (JSON).
+  admissionFormConfig   Json?
   updatedAt             DateTime @updatedAt
 }
 

@@ -3,12 +3,18 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { JobStatus, RenewalStatus, ActivityPricing } from '@prisma/client';
+import {
+  JobStatus,
+  Prisma,
+  RenewalStatus,
+  ActivityPricing,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { StudentsService } from '../students/students.service';
 import { RoomsService } from '../rooms/rooms.service';
 import {
   assertSharedFormComplete,
+  assertParentConfirmation,
   primaryPersonFields,
   type GuardianInput,
   type EmergencyInput,
@@ -81,8 +87,11 @@ export class RenewalsService {
     guardians?: GuardianInput[];
     emergencyContacts?: EmergencyInput[];
     activities?: string[];
+    formExtras?: Record<string, unknown>;
+    parentConfirmationAccepted?: boolean;
   }) {
     assertSharedFormComplete(data);
+    assertParentConfirmation(data);
     const person = primaryPersonFields(data);
 
     const year = await this.prisma.academicYear.findUnique({
@@ -140,6 +149,9 @@ export class RenewalsService {
         activities: person.activities,
         previousYearLabel: data.previousYearLabel || null,
         notes: data.notes || null,
+        formExtras: (data.formExtras ?? undefined) as
+          | Prisma.InputJsonValue
+          | undefined,
         status,
       },
       include: {
@@ -332,7 +344,10 @@ export class ActivitiesService {
   };
 
   async listPublic(serviceName?: string, unitId?: string, unitName?: string) {
-    const trimmed = serviceName?.trim();
+    const requested = serviceName?.trim();
+    // Jardim de Infância usa a mesma oferta de actividades do Pré-Escolar.
+    const trimmed =
+      requested === 'Jardim de Infância' ? 'Pré-Escolar' : requested;
     if (trimmed) {
       // Resolve a unidade pedida (id directo ou por nome). Null = global.
       let resolvedUnitId = unitId?.trim() || null;
@@ -391,7 +406,7 @@ export class ActivitiesService {
           sortOrder: row.activity.sortOrder,
           pricing: row.pricing,
           priceAkz: row.priceAkz,
-          serviceName: row.service.name,
+          serviceName: requested || row.service.name,
         }));
     }
 

@@ -1,3 +1,9 @@
+/**
+ * Base da API (com prefixo /api).
+ * Local: omissão → http://localhost:3001/api
+ * Produção: definir VITE_API_URL no build, ex. https://api.betteryoukids.com/api
+ * (ver `.env.production.example` e docs/DEPLOY-CPANEL.md).
+ */
 export const API_BASE =
   import.meta.env.VITE_API_URL?.replace(/\/$/, "") ||
   "http://localhost:3001/api";
@@ -459,6 +465,29 @@ export const api = {
       method: "PATCH",
       body: JSON.stringify(body),
     }),
+  getAdmissionFormConfig: () =>
+    request<import("./admission-form").AdmissionFormConfig>(
+      "/settings/admission-form",
+    ),
+  getAdmissionFormConfigAdmin: () =>
+    request<import("./admission-form").AdmissionFormConfig>(
+      "/settings/admission-form/admin",
+    ),
+  updateAdmissionFormConfig: (
+    config: import("./admission-form").AdmissionFormConfig,
+  ) =>
+    request<import("./admission-form").AdmissionFormConfig>(
+      "/settings/admission-form",
+      {
+        method: "PATCH",
+        body: JSON.stringify({ config }),
+      },
+    ),
+  resetAdmissionFormConfig: () =>
+    request<import("./admission-form").AdmissionFormConfig>(
+      "/settings/admission-form/reset",
+      { method: "POST" },
+    ),
   createRenewal: (body: RenewalPayload) =>
     request<
       RenewalItem & {
@@ -1946,6 +1975,8 @@ export type EnrollmentPayload = {
     relation?: string;
   }>;
   activities?: string[];
+  formExtras?: Record<string, unknown>;
+  parentConfirmationAccepted: boolean;
 };
 
 export type EnrollmentResult = {
@@ -2218,6 +2249,8 @@ export type RenewalPayload = {
   guardians?: EnrollmentPayload["guardians"];
   emergencyContacts?: EnrollmentPayload["emergencyContacts"];
   activities?: string[];
+  formExtras?: Record<string, unknown>;
+  parentConfirmationAccepted: boolean;
 };
 
 export type RenewalItem = {

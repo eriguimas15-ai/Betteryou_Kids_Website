@@ -252,6 +252,16 @@ export function assertSharedFormComplete(data: SharedPersonForm) {
   }
 }
 
+export function assertParentConfirmation(data: {
+  parentConfirmationAccepted?: boolean;
+}) {
+  if (data.parentConfirmationAccepted !== true) {
+    throw new BadRequestException(
+      'É obrigatório confirmar a declaração final dos encarregados de educação.',
+    );
+  }
+}
+
 export function primaryPersonFields(data: SharedPersonForm) {
   const guardians = normalizeGuardians(data);
   const emergencies = normalizeEmergencies(data);

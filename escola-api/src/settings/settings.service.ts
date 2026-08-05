@@ -1,6 +1,11 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
+import {
+  buildDefaultAdmissionFormConfig,
+  normalizeAdmissionFormConfig,
+  type AdmissionFormConfig,
+} from './admission-form-defaults';
 
 const SETTINGS_ID = 'default';
 export const DEFAULT_WAITLIST_RESPONSE_HOURS = 48;
@@ -30,6 +35,31 @@ export class SettingsService {
   async isWaitlistDeadlineEnabled(): Promise<boolean> {
     const settings = await this.ensureExists();
     return settings.waitlistDeadlineEnabled;
+  }
+
+  async getAdmissionFormConfig(): Promise<AdmissionFormConfig> {
+    const settings = await this.ensureExists();
+    return normalizeAdmissionFormConfig(settings.admissionFormConfig);
+  }
+
+  async updateAdmissionFormConfig(config: unknown): Promise<AdmissionFormConfig> {
+    const normalized = normalizeAdmissionFormConfig(config);
+    await this.ensureExists();
+    await this.prisma.platformSettings.update({
+      where: { id: SETTINGS_ID },
+      data: { admissionFormConfig: normalized as object },
+    });
+    return normalized;
+  }
+
+  async resetAdmissionFormConfig(): Promise<AdmissionFormConfig> {
+    const defaults = buildDefaultAdmissionFormConfig();
+    await this.ensureExists();
+    await this.prisma.platformSettings.update({
+      where: { id: SETTINGS_ID },
+      data: { admissionFormConfig: defaults as object },
+    });
+    return defaults;
   }
 
   async update(data: {
@@ -97,6 +127,7 @@ export class SettingsService {
         waitlistDeadlineEnabled: DEFAULT_WAITLIST_DEADLINE_ENABLED,
         smsEnabled: false,
         smsProvider: 'console',
+        admissionFormConfig: buildDefaultAdmissionFormConfig() as object,
       },
     });
   }

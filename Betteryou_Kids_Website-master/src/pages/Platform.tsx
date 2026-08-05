@@ -195,6 +195,18 @@ import {
   type EmergencyForm,
   type GuardianForm,
 } from "@/lib/shared-form";
+import {
+  buildFormExtrasPayload,
+  emptyAdmissionExtras,
+  missingAdmissionExtras,
+  type AdmissionFormExtras,
+} from "@/lib/admission-form";
+import {
+  EnrollmentExtrasSection,
+  ParentConfirmationSection,
+  RenewalExtrasSection,
+} from "@/components/platform/AdmissionFormSections";
+import { AdmissionQuestionsAdmin } from "@/components/platform/AdmissionQuestionsAdmin";
 // ContentEditor + ops views: lazy-loaded from @/components/platform
 const ContentEditor = lazy(() =>
   import("@/components/platform/ContentEditor").then((m) => ({
@@ -324,6 +336,7 @@ type View =
   | "portal"
   | "inscricoes"
   | "renovacoes"
+  | "formularios"
   | "ficha"
   | "espera"
   | "salas"
@@ -373,6 +386,14 @@ function loadStoredModules(): string[] {
   }
 }
 
+function canAccessFormularios(modules: string[], role: string) {
+  if (modules.includes("formularios")) return true;
+  return (
+    ["ADMIN", "DIRECAO", "COORDENACAO", "COMUNICACAO"].includes(role) &&
+    (modules.includes("inscricoes") || modules.includes("conteudo"))
+  );
+}
+
 function hasFichaAccess(modules: string[], role: string) {
   return modules.includes("ficha") || role === "ENCARREGADO";
 }
@@ -390,6 +411,7 @@ function navItemsFor(modules: string[], loggedIn: boolean, role = "") {
   return nav.filter((item) => {
     if (item.id === "portal") return hasPortalAccess(modules, role);
     if (item.id === "ficha") return hasFichaAccess(modules, role);
+    if (item.id === "formularios") return canAccessFormularios(modules, role);
     return modules.includes(item.id);
   });
 }
@@ -405,6 +427,7 @@ function canAccessView(
   if (!loggedIn) return false;
   if (view === "portal") return hasPortalAccess(modules, role);
   if (view === "ficha") return hasFichaAccess(modules, role);
+  if (view === "formularios") return canAccessFormularios(modules, role);
   return modules.includes(view);
 }
 
@@ -414,6 +437,7 @@ const nav = [
   { id: "portal" as View, label: "Portal do encarregado", icon: School },
   { id: "inscricoes" as View, label: "Inscrições", icon: ClipboardList },
   { id: "renovacoes" as View, label: "Renovações", icon: RefreshCw },
+  { id: "formularios" as View, label: "Formulários", icon: FileText },
   { id: "ficha" as View, label: "Ficha do aluno", icon: FileUser },
   { id: "espera" as View, label: "Lista de espera", icon: Users },
   { id: "salas" as View, label: "Salas", icon: DoorOpen },
@@ -670,6 +694,8 @@ export default function Platform({
         (nav.find((item) => {
           if (item.id === "portal") return hasPortalAccess(modules, userRole);
           if (item.id === "ficha") return hasFichaAccess(modules, userRole);
+          if (item.id === "formularios")
+            return canAccessFormularios(modules, userRole);
           return modules.includes(item.id);
         })?.id as View) ||
         "inscricoes";
@@ -997,6 +1023,9 @@ export default function Platform({
                 )}
             </>
           )}
+          {view === "formularios" &&
+            canAccessFormularios(modules, userRole) &&
+            !!token && <AdmissionQuestionsAdmin />}
           {view === "espera" && (
             <Waitlist
               needsLogin={!token}
@@ -1568,7 +1597,18 @@ function Enrollment({
   const [medication, setMedication] = useState("");
   const [foodRestrictions, setFoodRestrictions] = useState("");
   const [medicalNotes, setMedicalNotes] = useState("");
+  const [formExtras, setFormExtras] = useState<AdmissionFormExtras>(() =>
+    emptyAdmissionExtras(),
+  );
+  const [parentConfirmationAccepted, setParentConfirmationAccepted] =
+    useState(false);
   const [localError, setLocalError] = useState("");
+
+  useEffect(() => {
+    setFormExtras(emptyAdmissionExtras("nova"));
+    setParentConfirmationAccepted(false);
+    setLocalError("");
+  }, [service]);
 
   useEffect(() => {
     let active = true;
@@ -1656,6 +1696,22 @@ function Enrollment({
       setLocalError(`Dados em falta: ${missing.join("; ")}`);
       return;
     }
+    const extraMissing = missingAdmissionExtras(
+      service,
+      "enrollment",
+      formExtras,
+      await api.getAdmissionFormConfig().catch(() => undefined),
+    );
+    if (extraMissing.length > 0) {
+      setLocalError(`Dados em falta: ${extraMissing.join("; ")}`);
+      return;
+    }
+    if (!parentConfirmationAccepted) {
+      setLocalError(
+        "É obrigatório aceitar a confirmação final dos encarregados de educação.",
+      );
+      return;
+    }
     const primary = guardians[0];
     const emergency = emergencies[0];
     await onSubmit({
@@ -1686,6 +1742,11 @@ function Enrollment({
       guardians: toApiGuardians(guardians),
       emergencyContacts: toApiEmergencies(emergencies),
       activities,
+      formExtras: buildFormExtrasPayload(
+        formExtras,
+        parentConfirmationAccepted,
+      ),
+      parentConfirmationAccepted,
     });
   };
 
@@ -1897,11 +1958,22 @@ function Enrollment({
               </Field>
             </CardContent>
           </Card>
+          <EnrollmentExtrasSection
+            serviceName={service}
+            value={formExtras}
+            onChange={setFormExtras}
+          />
           <ActivitiesPicker
             options={activityOptions}
             value={activities}
             onChange={setActivities}
             serviceName={service}
+          />
+          <ParentConfirmationSection
+            mode="enrollment"
+            yearLabel={YEAR}
+            accepted={parentConfirmationAccepted}
+            onChange={setParentConfirmationAccepted}
           />
           {(localError || submissionError) && (
             <p className="rounded-lg bg-destructive/10 p-3 text-sm text-destructive">
@@ -2808,6 +2880,11 @@ function Renovacoes({
   const [activityOptions, setActivityOptions] = useState<ActivityOption[]>(() =>
     activitiesForService("Pré-Escolar"),
   );
+  const [formExtras, setFormExtras] = useState<AdmissionFormExtras>(() =>
+    emptyAdmissionExtras("renovacao"),
+  );
+  const [parentConfirmationAccepted, setParentConfirmationAccepted] =
+    useState(false);
 
   const setField =
     (key: keyof typeof form) => (value: string) =>
@@ -2876,6 +2953,11 @@ function Renovacoes({
   }, [form.serviceName, form.unitName]);
 
   useEffect(() => {
+    setFormExtras(emptyAdmissionExtras("renovacao"));
+    setParentConfirmationAccepted(false);
+  }, [form.serviceName]);
+
+  useEffect(() => {
     if (form.serviceName !== "1.º Ciclo") setLevelLabel("");
   }, [form.serviceName]);
 
@@ -2938,6 +3020,24 @@ function Renovacoes({
       setSubmitting(false);
       return;
     }
+    const extraMissing = missingAdmissionExtras(
+      form.serviceName,
+      "renewal",
+      formExtras,
+      await api.getAdmissionFormConfig().catch(() => undefined),
+    );
+    if (extraMissing.length > 0) {
+      setMessage(`Dados em falta: ${extraMissing.join("; ")}`);
+      setSubmitting(false);
+      return;
+    }
+    if (!parentConfirmationAccepted) {
+      setMessage(
+        "É obrigatório aceitar a confirmação final dos encarregados de educação.",
+      );
+      setSubmitting(false);
+      return;
+    }
     const rooms = roomsResult?.rooms ?? [];
     if (rooms.length > 0 && !selectedRoomId) {
       setMessage("Seleccione uma sala, ou aguarde se não houver vagas.");
@@ -2978,6 +3078,11 @@ function Renovacoes({
         guardians: toApiGuardians(guardians),
         emergencyContacts: toApiEmergencies(emergencies),
         activities,
+        formExtras: buildFormExtrasPayload(
+          formExtras,
+          parentConfirmationAccepted,
+        ),
+        parentConfirmationAccepted,
       });
       setSubmitted(
         result.estado === "lista_espera" ? "lista_espera" : "pendente",
@@ -3044,6 +3149,8 @@ function Renovacoes({
     setGuardians([emptyGuardian()]);
     setEmergencies([emptyEmergency()]);
     setActivities([]);
+    setFormExtras(emptyAdmissionExtras("renovacao"));
+    setParentConfirmationAccepted(false);
     setForm((f) => ({
       ...f,
       childFullName: "",
@@ -3333,6 +3440,17 @@ function Renovacoes({
             value={activities}
             onChange={setActivities}
             serviceName={form.serviceName}
+          />
+          <RenewalExtrasSection
+            serviceName={form.serviceName}
+            value={formExtras}
+            onChange={setFormExtras}
+          />
+          <ParentConfirmationSection
+            mode="renewal"
+            yearLabel={YEAR}
+            accepted={parentConfirmationAccepted}
+            onChange={setParentConfirmationAccepted}
           />
 
           <Button
@@ -5852,6 +5970,7 @@ function Emprego({
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
   const [actioningId, setActioningId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState({
     title: "",
     department: "",
@@ -5860,6 +5979,18 @@ function Emprego({
     requirements: "",
     status: "RASCUNHO",
   });
+
+  const resetForm = () => {
+    setEditingId(null);
+    setForm({
+      title: "",
+      department: "",
+      location: "",
+      description: "",
+      requirements: "",
+      status: "RASCUNHO",
+    });
+  };
 
   const loadPublic = () => {
     api
@@ -5887,35 +6018,57 @@ function Emprego({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [canManage, loggedIn]);
 
-  const createJob = async (event: React.FormEvent) => {
+  const startEdit = (job: JobOpening) => {
+    setEditingId(job.id);
+    setForm({
+      title: job.title,
+      department: job.department || "",
+      location: job.location || "",
+      description: job.description,
+      requirements: job.requirements || "",
+      status: job.status || "RASCUNHO",
+    });
+    setMessage("");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
+  const submitJob = async (event: React.FormEvent) => {
     event.preventDefault();
     setSaving(true);
     setMessage("");
+    const payload = {
+      title: form.title,
+      department: form.department || undefined,
+      location: form.location || undefined,
+      description: form.description,
+      requirements: form.requirements || undefined,
+      status: form.status,
+    };
     try {
-      await api.createJob({
-        title: form.title,
-        department: form.department || undefined,
-        location: form.location || undefined,
-        description: form.description,
-        requirements: form.requirements || undefined,
-        status: form.status,
-      });
-      setForm({
-        title: "",
-        department: "",
-        location: "",
-        description: "",
-        requirements: "",
-        status: "RASCUNHO",
-      });
-      setMessage("Vaga criada com sucesso.");
+      if (editingId) {
+        await api.updateJob(editingId, {
+          title: payload.title,
+          department: form.department.trim() || undefined,
+          location: form.location.trim() || undefined,
+          description: payload.description,
+          requirements: form.requirements.trim() || undefined,
+          status: form.status,
+        });
+        setMessage("Vaga actualizada com sucesso.");
+      } else {
+        await api.createJob(payload);
+        setMessage("Vaga criada com sucesso.");
+      }
+      resetForm();
       loadAdmin();
       loadPublic();
     } catch (error) {
       setMessage(
         error instanceof Error
           ? error.message
-          : "Não foi possível criar a vaga.",
+          : editingId
+            ? "Não foi possível actualizar a vaga."
+            : "Não foi possível criar a vaga.",
       );
     } finally {
       setSaving(false);
@@ -5930,6 +6083,9 @@ function Emprego({
       setMessage(
         status === "PUBLICADA" ? "Vaga publicada." : "Estado actualizado.",
       );
+      if (editingId === id) {
+        setForm((f) => ({ ...f, status }));
+      }
       loadAdmin();
       loadPublic();
     } catch (error) {
@@ -5944,11 +6100,13 @@ function Emprego({
   };
 
   const removeJob = async (id: string) => {
+    if (!window.confirm("Remover esta vaga definitivamente?")) return;
     setActioningId(id);
     setMessage("");
     try {
       await api.deleteJob(id);
       setMessage("Vaga removida.");
+      if (editingId === id) resetForm();
       loadAdmin();
       loadPublic();
     } catch (error) {
@@ -6004,7 +6162,19 @@ function Emprego({
                       {[job.department, job.location].filter(Boolean).join(" · ")}
                     </p>
                   </div>
-                  <Badge variant="secondary">Publicada</Badge>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="secondary">Publicada</Badge>
+                    {canManage && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => startEdit(job)}
+                      >
+                        <Pencil className="mr-1 h-4 w-4" />
+                        Editar
+                      </Button>
+                    )}
+                  </div>
                 </div>
                 <p className="mt-3 text-sm whitespace-pre-wrap">{job.description}</p>
                 {job.requirements && (
@@ -6022,10 +6192,12 @@ function Emprego({
         <>
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Nova vaga</CardTitle>
+              <CardTitle className="text-lg">
+                {editingId ? "Editar vaga" : "Nova vaga"}
+              </CardTitle>
             </CardHeader>
             <CardContent>
-              <form className="grid gap-4 sm:grid-cols-2" onSubmit={createJob}>
+              <form className="grid gap-4 sm:grid-cols-2" onSubmit={submitJob}>
                 <Field label="Título">
                   <Input
                     required
@@ -6093,10 +6265,24 @@ function Emprego({
                     />
                   </Field>
                 </div>
-                <div className="sm:col-span-2">
+                <div className="sm:col-span-2 flex flex-wrap gap-2">
                   <Button type="submit" disabled={saving}>
-                    {saving ? "A guardar..." : "Criar vaga"}
+                    {saving
+                      ? "A guardar..."
+                      : editingId
+                        ? "Actualizar vaga"
+                        : "Criar vaga"}
                   </Button>
+                  {editingId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={saving}
+                      onClick={resetForm}
+                    >
+                      Cancelar
+                    </Button>
+                  )}
                 </div>
               </form>
             </CardContent>
@@ -6116,7 +6302,9 @@ function Emprego({
                 {adminJobs.map((job) => (
                   <div
                     key={job.id}
-                    className="flex flex-wrap items-center justify-between gap-3 p-5"
+                    className={`flex flex-wrap items-center justify-between gap-3 p-5 ${
+                      editingId === job.id ? "bg-primary/5" : ""
+                    }`}
                   >
                     <div>
                       <p className="font-semibold">{job.title}</p>
@@ -6128,6 +6316,15 @@ function Emprego({
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge variant="outline">{job.status}</Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => startEdit(job)}
+                        disabled={actioningId === job.id}
+                      >
+                        <Pencil className="mr-1 h-4 w-4" />
+                        Editar
+                      </Button>
                       {job.status !== "PUBLICADA" && (
                         <Button
                           size="sm"

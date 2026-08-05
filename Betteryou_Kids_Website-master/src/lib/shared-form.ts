@@ -59,6 +59,14 @@ export const ACTIVITY_OFFERINGS_BY_SERVICE: Record<string, ActivityOption[]> = {
     { name: "Ballet", pricing: "PAID", priceAkz: 40000 },
     { name: "Xadrez", pricing: "PAID", priceAkz: 30000 },
   ],
+  "Jardim de Infância": [
+    { name: "Ginástica", pricing: "INCLUDED", priceAkz: null },
+    { name: "Inglês", pricing: "INCLUDED", priceAkz: null },
+    { name: "Música", pricing: "INCLUDED", priceAkz: null },
+    { name: "Jiu-Jitsu", pricing: "PAID", priceAkz: 40000 },
+    { name: "Ballet", pricing: "PAID", priceAkz: 40000 },
+    { name: "Xadrez", pricing: "PAID", priceAkz: 30000 },
+  ],
   ATL: [
     { name: "Ginástica", pricing: "INCLUDED", priceAkz: null },
     { name: "Inglês", pricing: "INCLUDED", priceAkz: null },
@@ -85,6 +93,15 @@ export const ACTIVITY_OFFERINGS_PATRIOTA: Record<string, ActivityOption[]> = {
     { name: "Natação", pricing: "PAID", priceAkz: 30000 },
   ],
   "Pré-Escolar": [
+    { name: "Ginástica", pricing: "INCLUDED", priceAkz: null },
+    { name: "Inglês", pricing: "INCLUDED", priceAkz: null },
+    { name: "Música", pricing: "INCLUDED", priceAkz: null },
+    { name: "Jiu-Jitsu", pricing: "PAID", priceAkz: 30000 },
+    { name: "Ballet", pricing: "PAID", priceAkz: 30000 },
+    { name: "Xadrez", pricing: "PAID", priceAkz: 25000 },
+    { name: "Natação", pricing: "PAID", priceAkz: 30000 },
+  ],
+  "Jardim de Infância": [
     { name: "Ginástica", pricing: "INCLUDED", priceAkz: null },
     { name: "Inglês", pricing: "INCLUDED", priceAkz: null },
     { name: "Música", pricing: "INCLUDED", priceAkz: null },
@@ -133,6 +150,15 @@ export const FALLBACK_ACTIVITIES = [
 ];
 
 /**
+ * Jardim de Infância partilha a matriz de actividades do Pré-Escolar.
+ */
+export function resolveActivityServiceName(serviceName: string): string {
+  const service = serviceName.trim();
+  if (service === "Jardim de Infância") return "Pré-Escolar";
+  return service;
+}
+
+/**
  * Todas as actividades do serviço (incluídas e opcionais/pagas).
  * Se indicada a unidade, usa a matriz específica dessa unidade (fallback → padrão/Gika).
  */
@@ -140,7 +166,7 @@ export function activitiesForService(
   serviceName: string,
   unitName?: string,
 ): ActivityOption[] {
-  const service = serviceName.trim();
+  const service = resolveActivityServiceName(serviceName);
   const unit = unitName?.trim();
   const unitMatrix = unit ? ACTIVITY_OFFERINGS_BY_UNIT[unit] : undefined;
   return (

@@ -4,7 +4,12 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { EnrollmentStatus, Role, WaitlistStatus } from '@prisma/client';
+import {
+  EnrollmentStatus,
+  Prisma,
+  Role,
+  WaitlistStatus,
+} from '@prisma/client';
 import { existsSync } from 'fs';
 import { basename, resolve, sep } from 'path';
 import { PrismaService } from '../prisma/prisma.service';
@@ -16,6 +21,7 @@ import { AuditService } from '../common/audit/audit.service';
 import { CreateEnrollmentDto } from './dto/create-enrollment.dto';
 import {
   assertSharedFormComplete,
+  assertParentConfirmation,
   primaryPersonFields,
 } from '../common/person-form';
 import { unitNameCandidates } from '../units/units.service';
@@ -45,6 +51,7 @@ export class EnrollmentsService {
 
   async create(dto: CreateEnrollmentDto) {
     assertSharedFormComplete(dto);
+    assertParentConfirmation(dto);
     const person = primaryPersonFields(dto);
 
     const year = await this.prisma.academicYear.findUnique({
@@ -92,6 +99,9 @@ export class EnrollmentsService {
       guardians: person.guardians,
       emergencyContacts: person.emergencies,
       activities: person.activities,
+      formExtras: (dto.formExtras ?? undefined) as
+        | Prisma.InputJsonValue
+        | undefined,
     };
 
     // Sem sala escolhida → lista de espera directa

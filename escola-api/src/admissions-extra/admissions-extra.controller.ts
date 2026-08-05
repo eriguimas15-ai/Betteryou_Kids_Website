@@ -20,6 +20,7 @@ import {
   IsEmail,
   IsEnum,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
   Min,
@@ -237,6 +238,13 @@ class CreateRenewalDto {
   @IsArray()
   @IsString({ each: true })
   activities?: string[];
+
+  @IsOptional()
+  @IsObject()
+  formExtras?: Record<string, unknown>;
+
+  @IsBoolean()
+  parentConfirmationAccepted: boolean;
 }
 
 class RenewalStatusDto {
