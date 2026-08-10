@@ -10,12 +10,33 @@ function cookieSecure(): boolean {
   return process.env.NODE_ENV === 'production';
 }
 
+/**
+ * SameSite dos cookies de auth.
+ * Prefixo+subdomínio no mesmo eTLD+1 (ex.: betteryoukids.com → api.betteryoukids.com)
+ * é same-site (cross-origin): `lax` envia cookies em fetch/XHR com credentials.
+ * Só use `none` (+ Secure) se a API estiver noutro site (eTLD+1 diferente) ou
+ * se um browser concreto falhar com `lax` — via COOKIE_SAMESITE=none.
+ */
+function cookieSameSite(): 'lax' | 'strict' | 'none' {
+  const raw = (process.env.COOKIE_SAMESITE || 'lax').trim().toLowerCase();
+  if (raw === 'none' || raw === 'strict' || raw === 'lax') return raw;
+  return 'lax';
+}
+
 function baseCookieOptions(): CookieOptions {
+  const secure = cookieSecure();
+  const sameSite = cookieSameSite();
+  if (sameSite === 'none' && !secure) {
+    console.warn(
+      '[SECURITY] COOKIE_SAMESITE=none requer Secure — cookies podem ser rejeitados pelo browser.',
+    );
+  }
   return {
     httpOnly: true,
-    secure: cookieSecure(),
-    sameSite: 'lax',
+    secure,
+    sameSite,
     path: '/',
+    // Sem Domain= — cookie host-only em api.*; o browser envia-o nas pedidos a esse host.
   };
 }
 

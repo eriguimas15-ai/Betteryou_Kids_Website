@@ -1,5 +1,7 @@
 # Operação da Plataforma Betteryou Kids
 
+> **Deploy Namecheap/cPanel** (apex + `api.` + MariaDB): ver [DEPLOY-CPANEL.md](./DEPLOY-CPANEL.md).
+
 ## Variáveis de ambiente obrigatórias/recomendadas
 
 ### API (`escola-api/.env`)
@@ -11,6 +13,8 @@
 - `JWT_EXPIRES_IN` / `JWT_REFRESH_EXPIRES_IN` - duração dos cookies (ex.: `15m`, `7d`).
 - `CORS_ORIGIN` - lista de origens do frontend (vírgula). **Nunca** usar `*` com cookies. Em staging/prod: URL **exacta** HTTPS.
 - `COOKIE_SECURE` - `true`/`false` para o flag `Secure` nos cookies HttpOnly. Em produção, omissão = `true`. Local HTTP: `false`.
+- `COOKIE_SAMESITE` - `lax` (omissão), `strict` ou `none`. Split `betteryoukids.com` ↔ `api.betteryoukids.com` é same-site: **manter `lax`**. `none` só com API noutro eTLD+1 (+ `COOKIE_SECURE=true`).
+- `HOST` - bind da API (omissão `0.0.0.0`; útil em cPanel/Passenger).
 - `SWAGGER_ENABLED` - `true` para forçar Swagger; `false` para desactivar. Em produção, omissão = desactivado.
 - `SWAGGER_RETURN_TOKENS` - `true` para devolver `accessToken`/`refreshToken` no JSON (Swagger/Bearer). **Omitir** no SPA — tokens só em cookies.
 - `PUBLIC_APP_URL` - URL pública do frontend (usada em links de email).
@@ -25,15 +29,16 @@ Antes de abrir a plataforma a utilizadores reais:
 4. `CORS_ORIGIN` = origem exacta do frontend (ex.: `https://app.example.com`) — sem `*`
 5. `SWAGGER_ENABLED` **unset** ou `false` (não expor `/docs`)
 6. `SWAGGER_RETURN_TOKENS` **unset** (SPA cookie-only)
-7. Cookies: `HttpOnly` + `Secure` + `SameSite=Lax`; frontend com `credentials: 'include'`
-8. Confirmar `helmet` na API e CSP enforce no build do frontend (secção CSP abaixo)
+7. Cookies: `HttpOnly` + `Secure` + `SameSite=Lax` (subdomínios do mesmo site); frontend com `credentials: 'include'` e `VITE_API_URL` de produção no build
+8. Confirmar `helmet` + `trust proxy` na API e CSP enforce no build do frontend (secção CSP abaixo)
 9. Smoke: `npm run smoke:roles` e `npm run smoke:crud` contra a API de staging (seed de teste só em ambiente controlado)
 10. Backup MySQL + pasta `UPLOAD_DIR` agendados; testar restauro
 11. SMTP/SMS: validar envio real ou deixar em simulação consciente
 12. Contas operacionais (ADMIN/DIRECAO/…) com palavras-passe fortes — não reutilizar seed de demo
 
 ### Autenticação (SEC-06)
-- Access e refresh JWT são emitidos como cookies HttpOnly (`by_access_token`, `by_refresh_token`), `SameSite=Lax`, `Secure` conforme `COOKIE_SECURE` (produção por omissão = Secure).
+- Access e refresh JWT são emitidos como cookies HttpOnly (`by_access_token`, `by_refresh_token`), `SameSite` conforme `COOKIE_SAMESITE` (omissão `Lax`), `Secure` conforme `COOKIE_SECURE` (produção por omissão = Secure).
+- SPA no apex e API em `api.*` do **mesmo** domínio registado: cross-origin mas same-site — `Lax` + CORS credentials é suficiente (ver [DEPLOY-CPANEL.md](./DEPLOY-CPANEL.md)).
 - O frontend deve chamar a API com `credentials: 'include'` e **não** guardar tokens em `localStorage` (apenas flag de sessão `by_session`).
 - Corpo JSON de login/register/refresh: **sem** tokens, excepto `SWAGGER_RETURN_TOKENS=true`.
 - `Authorization: Bearer` continua válido (Swagger / testes / clientes API).

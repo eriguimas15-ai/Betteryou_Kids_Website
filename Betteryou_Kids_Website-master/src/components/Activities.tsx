@@ -1,82 +1,51 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Music, Dumbbell, Palette, Camera, TreePine, BookOpen, Utensils, Globe, Calendar, Clock, Users } from "lucide-react";
+import { Calendar, Clock, Users } from "lucide-react";
 import ActivityRegistration from "@/components/ActivityRegistration";
 import natureImage from "@/assets/nature-play.jpg";
 import creativeImage from "@/assets/creative-activities.jpg";
+import { getPublicCmsPage } from "@/lib/api";
+import { cmsIcon } from "@/lib/cms-icons";
+import {
+  CMS_ACTIVIDADES_SECTION,
+  CMS_ACTIVIDADES_SLUG,
+  DEFAULT_CMS_ACTIVITIES,
+  parseActivitiesJson,
+  sectionValue,
+  type CmsActivityCard,
+} from "@/lib/site-content-cms";
+
+const FALLBACK_IMAGES = [creativeImage, natureImage];
+
+const colorClass = (color: string) => {
+  const map: Record<string, { bg: string; text: string }> = {
+    pink: { bg: "bg-pink/10", text: "text-pink" },
+    blue: { bg: "bg-blue/10", text: "text-blue" },
+    green: { bg: "bg-green/10", text: "text-green" },
+    secondary: { bg: "bg-secondary/10", text: "text-secondary" },
+    accent: { bg: "bg-accent/10", text: "text-accent" },
+    purple: { bg: "bg-purple/10", text: "text-purple" },
+    red: { bg: "bg-red/10", text: "text-red" },
+  };
+  return map[color] || map.pink;
+};
 
 const Activities = () => {
-  const activities = [
-    {
-      icon: Music,
-      title: "Música",
-      description: "Exploração musical com instrumentos, canto e movimento corporal para desenvolvimento rítmico e auditivo.",
-      category: "Artística",
-      color: "pink",
-      image: creativeImage
-    },
-    {
-      icon: Dumbbell,
-      title: "Jiu-Jitsu",
-      description: "Arte marcial que desenvolve disciplina, respeito, coordenação motora e autoconfiança.",
-      category: "Desportiva",
-      color: "blue"
-      ,
-      image: natureImage
-    },
-    {
-      icon: Palette,
-      title: "Ballet",
-      description: "Dança clássica que promove graciosidade, equilíbrio, postura e expressão artística.",
-      category: "Artística",
-      color: "pink"
-      ,
-      image: creativeImage
-    },
-    {
-      icon: TreePine,
-      title: "Actividades na Natureza",
-      description: "Exploração do ambiente natural, jardinagem e consciência ecológica.",
-      category: "Natureza",
-      color: "green",
-      image: natureImage
-    },
-    {
-      icon: Palette,
-      title: "Artes Plásticas",
-      description: "Pintura, desenho, escultura e artesanato para estimular a criatividade e expressão.",
-      category: "Artística",
-      color: "accent"
-      ,
-      image: creativeImage
-    },
-    {
-      icon: BookOpen,
-      title: "A Magia das Histórias",
-      description: "Desenvolvimento da linguagem, imaginação e amor pela leitura através de narrativas envolventes.",
-      category: "Educativa",
-      color: "secondary",
-      image: creativeImage
-    },
-    {
-      icon: Utensils,
-      title: "Culinária Infantil",
-      description: "Introdução à culinária saudável, desenvolvendo coordenação motora e autonomia.",
-      category: "Prática",
-      color: "accent"
-      ,
-      image: creativeImage
-    },
-    {
-      icon: Globe,
-      title: "Línguas Estrangeiras",
-      description: "Introdução lúdica ao inglês e outras línguas através de jogos e músicas.",
-      category: "Educativa",
-      color: "blue"
-      ,
-      image: creativeImage
-    }
-  ];
+  const [activities, setActivities] = useState<CmsActivityCard[]>(
+    DEFAULT_CMS_ACTIVITIES,
+  );
+
+  useEffect(() => {
+    getPublicCmsPage(CMS_ACTIVIDADES_SLUG)
+      .then((page) => {
+        const parsed = parseActivitiesJson(
+          sectionValue(page, CMS_ACTIVIDADES_SECTION),
+        );
+        if (parsed?.length) setActivities(parsed);
+      })
+      .catch(() => undefined);
+  }, []);
 
   const upcomingActivities = [
     {
@@ -180,7 +149,6 @@ const Activities = () => {
   return (
     <section id="activities" className="pt-32 pb-20 bg-gradient-to-b from-white to-muted/30">
       <div className="container mx-auto px-4">
-        {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-primary mb-6">
             Actividades Extracurriculares
@@ -191,38 +159,41 @@ const Activities = () => {
           </p>
         </div>
 
-        {/* Activities Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 mb-16">
-          {activities.map((activity, index) => (
-            <Card key={index} className="shadow-soft hover:shadow-colorful transition-all duration-300 group overflow-hidden">
-              {activity.image && (
+          {activities.map((activity, index) => {
+            const palette = colorClass(activity.color);
+            const Icon = cmsIcon(activity.icon);
+            const imageSrc =
+              activity.imageUrl.trim() ||
+              FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
+            return (
+              <Card key={activity.id} className="shadow-soft hover:shadow-colorful transition-all duration-300 group overflow-hidden">
                 <div className="h-32 overflow-hidden">
                   <img 
-                    src={activity.image} 
+                    src={imageSrc} 
                     alt={activity.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                 </div>
-              )}
-              <CardContent className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-2 bg-${activity.color}/10 rounded-lg group-hover:scale-110 transition-transform duration-300`}>
-                    <activity.icon className={`h-6 w-6 text-${activity.color}`} />
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className={`p-2 ${palette.bg} rounded-lg group-hover:scale-110 transition-transform duration-300`}>
+                      <Icon className={`h-6 w-6 ${palette.text}`} />
+                    </div>
+                    <Badge variant="secondary" className="text-xs">
+                      {activity.category}
+                    </Badge>
                   </div>
-                  <Badge variant="secondary" className="text-xs">
-                    {activity.category}
-                  </Badge>
-                </div>
-                <h3 className="text-lg font-semibold text-primary mb-2">{activity.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  {activity.description}
-                </p>
-              </CardContent>
-            </Card>
-          ))}
+                  <h3 className="text-lg font-semibold text-primary mb-2">{activity.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {activity.description}
+                  </p>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
 
-        {/* Upcoming Activities */}
         <div className="bg-white rounded-2xl p-8 md:p-12 shadow-soft mb-16">
           <div className="text-center mb-12">
             <h3 className="text-3xl font-bold text-primary mb-4">Próximas Actividades</h3>
@@ -262,7 +233,6 @@ const Activities = () => {
           </div>
         </div>
 
-        {/* Past Activities */}
         <div className="bg-gradient-to-r from-muted/20 to-accent/10 rounded-2xl p-8 md:p-12 mb-16">
           <div className="text-center mb-12">
             <h3 className="text-3xl font-bold text-primary mb-4">Actividades Realizadas</h3>
@@ -298,7 +268,6 @@ const Activities = () => {
           </div>
         </div>
 
-        {/* Events Section */}
         <div className="bg-white rounded-2xl p-8 md:p-12 shadow-soft">
           <div className="text-center mb-12">
             <h3 className="text-3xl font-bold text-primary mb-4">Eventos Comunitários</h3>
@@ -311,16 +280,16 @@ const Activities = () => {
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {events.map((event, index) => (
               <div key={index} className="relative group">
-                <div className={`absolute inset-0 bg-gradient-to-br from-${event.color}/20 to-${event.color}/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
+                <div className="absolute inset-0 bg-primary/5 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                 <div className="relative p-6 border border-border rounded-xl hover:border-primary/30 transition-colors duration-300">
-                  <div className={`w-12 h-12 bg-${event.color}/10 rounded-full flex items-center justify-center mb-4`}>
-                    <div className={`w-6 h-6 bg-${event.color} rounded-full animate-pulse-glow`}></div>
+                  <div className={`w-12 h-12 ${colorClass(event.color).bg} rounded-full flex items-center justify-center mb-4`}>
+                    <div className={`w-6 h-6 rounded-full animate-pulse-glow ${colorClass(event.color).text}`} style={{ backgroundColor: "currentColor" }}></div>
                   </div>
                   <h4 className="font-semibold text-primary mb-2">{event.title}</h4>
                   <p className="text-sm text-muted-foreground mb-3 leading-relaxed">
                     {event.description}
                   </p>
-                  <Badge className={`bg-${event.color}/10 text-${event.color} hover:bg-${event.color}/20`}>
+                  <Badge className={`${colorClass(event.color).bg} ${colorClass(event.color).text}`}>
                     {event.date}
                   </Badge>
                 </div>
@@ -329,7 +298,6 @@ const Activities = () => {
           </div>
         </div>
 
-        {/* Benefits Section */}
         <div className="mt-16 text-center">
           <h3 className="text-3xl font-bold text-primary mb-8">
             Benefícios das Actividades Extracurriculares

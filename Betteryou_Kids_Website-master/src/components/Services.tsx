@@ -1,9 +1,33 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-import { Baby, Users, GraduationCap, Clock, Star, ArrowRight, Gift } from "lucide-react";
+import { Users, Star, ArrowRight } from "lucide-react";
+import { getPublicCmsPage } from "@/lib/api";
+import { cmsIcon } from "@/lib/cms-icons";
+import {
+  CMS_SERVICOS_SECTION,
+  CMS_SERVICOS_SLUG,
+  DEFAULT_CMS_SERVICES,
+  parseServicesJson,
+  sectionValue,
+  type CmsServiceCard,
+} from "@/lib/site-content-cms";
 
 const Services = () => {
+  const [services, setServices] = useState<CmsServiceCard[]>(DEFAULT_CMS_SERVICES);
+
+  useEffect(() => {
+    getPublicCmsPage(CMS_SERVICOS_SLUG)
+      .then((page) => {
+        const parsed = parseServicesJson(
+          sectionValue(page, CMS_SERVICOS_SECTION),
+        );
+        if (parsed?.length) setServices(parsed);
+      })
+      .catch(() => undefined);
+  }, []);
+
   const colorStyles = {
     pink: {
       iconBackground: "hsl(var(--pink) / 0.1)",
@@ -52,106 +76,16 @@ const Services = () => {
       bullet: "hsl(var(--red))",
       button: "hsl(var(--red))",
       gradient: "linear-gradient(90deg, hsl(var(--red)), hsl(var(--red) / 0.8))"
-    }
+    },
+    blue: {
+      iconBackground: "hsl(var(--blue) / 0.1)",
+      icon: "hsl(var(--blue))",
+      age: "hsl(var(--blue))",
+      bullet: "hsl(var(--blue))",
+      button: "hsl(var(--blue))",
+      gradient: "linear-gradient(90deg, hsl(var(--blue)), hsl(var(--blue) / 0.8))"
+    },
   } as const;
-
-  const services = [
-    {
-      icon: Baby,
-      title: "Creche",
-      ageRange: "1-3 anos",
-      description: "Cuidados especializados para os primeiros anos, com foco no desenvolvimento motor, emocional e cognitivo.",
-      features: [
-        "Cuidados personalizados",
-        "Desenvolvimento motor",
-        "Primeiras interações sociais",
-        "Alimentação saudável",
-        "Ambiente seguro e acolhedor"
-      ],
-      color: "pink",
-      gradient: "from-pink to-pink/80"
-    },
-    {
-      icon: Users,
-      title: "Pré-Escolar",
-      ageRange: "3-5 anos",
-      description: "Preparação para a vida escolar através de actividades lúdicas e educativas que estimulam a curiosidade.",
-      features: [
-        "Preparação escolar",
-        "Actividades lúdicas",
-        "Desenvolvimento da linguagem",
-        "Coordenação motora",
-        "Socialização"
-      ],
-      color: "secondary",
-      gradient: "from-secondary to-secondary/80"
-    },
-    {
-      icon: GraduationCap,
-      title: "Jardim de Infância",
-      ageRange: "5-6 anos",
-      description: "Transição suave para o ensino primário com actividades que desenvolvem a autonomia e responsabilidade.",
-      features: [
-        "Preparação para o primário",
-        "Desenvolvimento da autonomia",
-        "Iniciação à leitura e escrita",
-        "Raciocínio lógico",
-        "Responsabilidade social"
-      ],
-      color: "green",
-      gradient: "from-green to-green/80"
-    },
-    {
-      icon: GraduationCap,
-      title: "1º Ciclo",
-      ageRange: "6-10 anos",
-      description: "Apoio educacional completo para o 1º Ciclo do Ensino Básico, com reforço escolar, actividades criativas e acompanhamento socioemocional.",
-      features: [
-        "Reforço escolar e trabalhos de casa",
-        "Aulas de apoio em português, matemática e ciências",
-        "Actividades lúdicas que fortalecem a autonomia",
-        "Estímulo à leitura e expressão criativa",
-        "Preparação para avaliações e organização do estudo",
-        "Horários flexíveis adaptados às famílias"
-      ],
-      color: "accent",
-      gradient: "from-accent to-accent/80"
-    },
-    {
-      icon: Clock,
-      title: "ATL",
-      ageRange: "3-10 anos",
-      description: "Actividades de tempos livres que complementam o ensino regular com diversão e aprendizagem.",
-      features: [
-        "Apoio aos trabalhos de casa",
-        "Actividades recreativas",
-        "Desenvolvimento de hobbies",
-        "Convívio social",
-        "Flexibilidade de horários"
-      ],
-      color: "purple",
-      gradient: "from-purple to-purple/80"
-    },
-    {
-      icon: Gift,
-      title: "Festas e Eventos Infantis",
-      ageRange: "3-10 anos",
-      description: "Transformamos cada celebração numa experiência única, com um espaço acolhedor, divertido e preparado para receber aniversários, baptizados, festas temáticas e outros eventos infantis.",
-      features: [
-        "Aluguer exclusivo do espaço",
-        "Parque de estacionamento",
-        "Ambiente seguro e confortável",
-        "Apoio na organização do evento",
-        "Festas de aniversário temáticas",
-        "Área de brincadeiras e entretenimento",
-        "Flexibilidade de horários",
-        "Espaço amplo para família e convidados",
-        "Pacotes adaptados às suas necessidades"
-      ],
-      color: "red",
-      gradient: "from-red to-red/80"
-    }
-  ];
 
   const additionalServices = [
     {
@@ -179,7 +113,6 @@ const Services = () => {
   return (
     <section id="services" className="pt-32 pb-20 bg-gradient-to-b from-muted/30 to-white">
       <div className="container mx-auto px-4">
-        {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold text-primary mb-6">
             Nossos Serviços
@@ -190,13 +123,15 @@ const Services = () => {
           </p>
         </div>
 
-        {/* Main Services Grid */}
         <div className="grid lg:grid-cols-2 gap-8 mb-16">
-          {services.map((service, index) => {
-            const palette = colorStyles[service.color as keyof typeof colorStyles] || colorStyles.pink;
+          {services.map((service) => {
+            const palette =
+              colorStyles[service.color as keyof typeof colorStyles] ||
+              colorStyles.pink;
+            const Icon = cmsIcon(service.icon);
 
             return (
-              <Card key={index} className="shadow-soft hover:shadow-colorful transition-all duration-300 group overflow-hidden">
+              <Card key={service.id} className="shadow-soft hover:shadow-colorful transition-all duration-300 group overflow-hidden">
                 <div className="h-2" style={{ backgroundImage: palette.gradient }}></div>
                 <CardHeader className="pb-4">
                   <div className="flex items-center justify-between">
@@ -205,7 +140,7 @@ const Services = () => {
                         className="p-3 rounded-full group-hover:scale-110 transition-transform duration-300"
                         style={{ backgroundColor: palette.iconBackground }}
                       >
-                        <service.icon className="h-8 w-8" style={{ color: palette.icon }} />
+                        <Icon className="h-8 w-8" style={{ color: palette.icon }} />
                       </div>
                       <div>
                         <CardTitle className="text-2xl text-primary">{service.title}</CardTitle>
@@ -246,7 +181,6 @@ const Services = () => {
           })}
         </div>
 
-        {/* Additional Services */}
         <div className="bg-white rounded-2xl p-8 md:p-12 shadow-soft">
           <div className="text-center mb-12">
             <h3 className="text-3xl font-bold text-primary mb-4">Serviços Complementares</h3>
@@ -266,7 +200,6 @@ const Services = () => {
           </div>
         </div>
 
-        {/* CTA Section */}
         <div className="text-center mt-16">
           <div className="bg-gradient-warm rounded-2xl p-8 md:p-12 text-white">
             <h3 className="text-3xl font-bold mb-4">

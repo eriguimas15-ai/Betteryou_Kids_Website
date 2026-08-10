@@ -4,7 +4,16 @@ import { ArrowRight, ChevronLeft, ChevronRight, Heart, Star } from "lucide-react
 import heroImage from "@/assets/hero-classroom.jpg";
 import natureImage from "@/assets/nature-play.jpg";
 import creativeImage from "@/assets/creative-activities.jpg";
-import { getPublicCmsPage } from "@/lib/api";
+import { getPublicCmsPage, uploadPublicUrl } from "@/lib/api";
+import {
+  DEFAULT_CMS_HERO_BUTTONS,
+  parseHeroButtonsJson,
+  parseHeroSlidesJson,
+  slidesFromLegacyFields,
+  buttonsFromLegacyCta,
+  type CmsHeroButton,
+  type CmsHeroSlide,
+} from "@/lib/hero-cms";
 
 type HeroSlide = {
   image: string;
@@ -15,12 +24,21 @@ type HeroSlide = {
   color1: string;
   color2: string;
   bgGradient: string;
-  /** Cores personalizadas via CMS (hex). Vazio = usa a cor predefinida. */
-  titleColorHex?: string;
+  /** Cores das 3 linhas do título via CMS (hex). Vazio = usa a classe predefinida. */
+  line1ColorHex?: string;
+  line2ColorHex?: string;
+  line3ColorHex?: string;
   descriptionColorHex?: string;
 };
 
-const DEFAULT_CTA = "Agendar Visita";
+const FALLBACK_IMAGES = [heroImage, natureImage, creativeImage];
+const FALLBACK_GRADIENTS = [
+  "from-pink-100/90 via-purple-50/80 to-green-100/70",
+  "from-green-100/90 via-blue-50/80 to-yellow-100/70",
+  "from-purple-100/90 via-pink-50/80 to-orange-100/70",
+];
+const FALLBACK_COLOR1 = ["text-pink-400", "text-green-500", "text-purple-500"];
+const FALLBACK_COLOR2 = ["text-green-400", "text-blue-400", "text-orange-400"];
 
 const DEFAULT_SLIDES: HeroSlide[] = [
   {
@@ -32,7 +50,10 @@ const DEFAULT_SLIDES: HeroSlide[] = [
       "Na Betteryou Kids, proporcionamos uma educação afectiva e inovadora que prepara seus filhos para um futuro brilhante através de metodologias únicas baseadas no amor, conexão com a natureza e estímulo à criatividade.",
     color1: "text-pink-400",
     color2: "text-green-400",
-    bgGradient: "from-pink-100/90 via-purple-50/80 to-green-100/70",
+    bgGradient: FALLBACK_GRADIENTS[0],
+    line1ColorHex: "#1e293b",
+    line2ColorHex: "#ea579a",
+    line3ColorHex: "#50c878",
   },
   {
     image: natureImage,
@@ -43,7 +64,7 @@ const DEFAULT_SLIDES: HeroSlide[] = [
       "Oferecemos experiências únicas de aprendizagem ao ar livre, onde cada criança descobre seu potencial através da conexão profunda com a natureza e actividades que estimulam todos os sentidos.",
     color1: "text-green-500",
     color2: "text-blue-400",
-    bgGradient: "from-green-100/90 via-blue-50/80 to-yellow-100/70",
+    bgGradient: FALLBACK_GRADIENTS[1],
   },
   {
     image: creativeImage,
@@ -54,7 +75,7 @@ const DEFAULT_SLIDES: HeroSlide[] = [
       "Nossas actividades artísticas e culturais permitem que cada criança explore sua criatividade única, desenvolvendo habilidades essenciais para a vida através de música, dança, arte e muito mais.",
     color1: "text-purple-500",
     color2: "text-orange-400",
-    bgGradient: "from-purple-100/90 via-pink-50/80 to-orange-100/70",
+    bgGradient: FALLBACK_GRADIENTS[2],
   },
 ];
 
@@ -65,49 +86,104 @@ function sectionValue(
   return sections?.find((s) => s.key === key)?.value?.trim() || "";
 }
 
+function resolveImageUrl(raw: string | undefined, index: number): string {
+  const value = raw?.trim();
+  if (!value) return FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
+  if (value.startsWith("http") || value.startsWith("data:") || value.startsWith("/")) {
+    return value.startsWith("/uploads/") ? uploadPublicUrl(value) : value;
+  }
+  return uploadPublicUrl(value);
+}
+
+function mapCmsSlide(slide: CmsHeroSlide, index: number): HeroSlide {
+  return {
+    image: resolveImageUrl(slide.imageUrl, index),
+    title: slide.line1,
+    highlight: slide.line2,
+    subtitle: slide.line3,
+    description: slide.description,
+    color1: FALLBACK_COLOR1[index % FALLBACK_COLOR1.length],
+    color2: FALLBACK_COLOR2[index % FALLBACK_COLOR2.length],
+    bgGradient: FALLBACK_GRADIENTS[index % FALLBACK_GRADIENTS.length],
+    line1ColorHex: slide.line1Color || undefined,
+    line2ColorHex: slide.line2Color || undefined,
+    line3ColorHex: slide.line3Color || undefined,
+    descriptionColorHex: slide.descriptionColor || undefined,
+  };
+}
+
 const ModernSlider = () => {
   const [currentSlide, setCurrentSlide] = useState(0);
   const [isAutoPlay, setIsAutoPlay] = useState(true);
   const [slides, setSlides] = useState<HeroSlide[]>(DEFAULT_SLIDES);
-  const [ctaPrimary, setCtaPrimary] = useState(DEFAULT_CTA);
+  const [buttons, setButtons] = useState<CmsHeroButton[]>(DEFAULT_CMS_HERO_BUTTONS);
 
   useEffect(() => {
     let cancelled = false;
     getPublicCmsPage("home")
       .then((page) => {
         if (cancelled) return;
-        const heroTitle = sectionValue(page.sections, "hero_title");
-        const heroSubtitle = sectionValue(page.sections, "hero_subtitle");
-        const titleColor = sectionValue(page.sections, "title_color");
-        const subtitleColor = sectionValue(page.sections, "subtitle_color");
-        const cta = sectionValue(page.sections, "cta_primary");
+        const slidesJson = sectionValue(page.sections, "hero_slides");
+        const buttonsJson = sectionValue(page.sections, "hero_buttons");
+        const parsedSlides = parseHeroSlidesJson(slidesJson);
+        const parsedButtons = parseHeroButtonsJson(buttonsJson);
 
-        if (
-          !heroTitle &&
-          !heroSubtitle &&
-          !cta &&
-          !titleColor &&
-          !subtitleColor
-        )
-          return;
+        if (parsedSlides?.length) {
+          setSlides(parsedSlides.map(mapCmsSlide));
+          setCurrentSlide(0);
+        } else {
+          const line1 = sectionValue(page.sections, "hero_title_line1");
+          const line2 = sectionValue(page.sections, "hero_title_line2");
+          const line3 = sectionValue(page.sections, "hero_title_line3");
+          const line1Color = sectionValue(page.sections, "hero_title_line1_color");
+          const line2Color = sectionValue(page.sections, "hero_title_line2_color");
+          const line3Color = sectionValue(page.sections, "hero_title_line3_color");
+          const heroTitle = sectionValue(page.sections, "hero_title");
+          const heroSubtitle = sectionValue(page.sections, "hero_subtitle");
+          const titleColor = sectionValue(page.sections, "title_color");
+          const subtitleColor = sectionValue(page.sections, "subtitle_color");
+          const hasLines = Boolean(line1 || line2 || line3);
 
-        setSlides((prev) => {
-          const next = [...prev];
-          const first = { ...next[0] };
-          if (heroTitle) {
-            first.title = heroTitle;
-            first.highlight = "";
-            first.subtitle = "";
+          if (hasLines || heroTitle || heroSubtitle) {
+            let l1 = line1;
+            let l2 = line2;
+            let l3 = line3;
+            if (!hasLines && heroTitle) {
+              const parts = heroTitle
+                .split(/\r?\n/)
+                .map((p) => p.trim())
+                .filter(Boolean);
+              if (parts.length >= 2) {
+                l1 = parts[0] ?? "";
+                l2 = parts[1] ?? "";
+                l3 = parts[2] ?? "";
+              } else {
+                l1 = heroTitle;
+                l2 = "";
+                l3 = "";
+              }
+            }
+            const legacy = slidesFromLegacyFields({
+              line1: l1,
+              line2: l2,
+              line3: l3,
+              line1Color: line1Color || titleColor,
+              line2Color: line2Color,
+              line3Color: line3Color,
+              description: heroSubtitle,
+              descriptionColor: subtitleColor,
+            });
+            setSlides(legacy.map(mapCmsSlide));
+            setCurrentSlide(0);
           }
-          if (heroSubtitle) {
-            first.description = heroSubtitle;
-          }
-          if (titleColor) first.titleColorHex = titleColor;
-          if (subtitleColor) first.descriptionColorHex = subtitleColor;
-          next[0] = first;
-          return next;
-        });
-        if (cta) setCtaPrimary(cta);
+        }
+
+        if (parsedButtons?.length) {
+          setButtons(parsedButtons);
+        } else {
+          const cta = sectionValue(page.sections, "cta_primary");
+          if (cta) setButtons(buttonsFromLegacyCta(cta));
+        }
       })
       .catch(() => {
         // Mantém o conteúdo hardcoded se a API falhar.
@@ -118,7 +194,7 @@ const ModernSlider = () => {
   }, []);
 
   useEffect(() => {
-    if (!isAutoPlay) return;
+    if (!isAutoPlay || slides.length === 0) return;
 
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % slides.length);
@@ -128,12 +204,17 @@ const ModernSlider = () => {
   }, [isAutoPlay, slides.length]);
 
   const nextSlide = () => {
+    if (slides.length === 0) return;
     setCurrentSlide((prev) => (prev + 1) % slides.length);
   };
 
   const prevSlide = () => {
+    if (slides.length === 0) return;
     setCurrentSlide((prev) => (prev - 1 + slides.length) % slides.length);
   };
+
+  const active = slides[currentSlide] ?? slides[0];
+  if (!active) return null;
 
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden bg-gradient-to-br from-blue-50 to-pink-50">
@@ -247,15 +328,20 @@ const ModernSlider = () => {
             {/* Título com cores alegres */}
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 leading-tight">
               <span
-                className="block animate-fade-in-up drop-shadow-sm"
-                style={{ color: slides[currentSlide].titleColorHex }}
+                className="block animate-fade-in-up drop-shadow-sm text-slate-800"
+                style={{
+                  color: slides[currentSlide].line1ColorHex,
+                }}
               >
                 {slides[currentSlide].title}
               </span>
               {slides[currentSlide].highlight ? (
                 <span
                   className={`block ${slides[currentSlide].color1} drop-shadow-md animate-fade-in-up`}
-                  style={{ animationDelay: "0.2s" }}
+                  style={{
+                    animationDelay: "0.2s",
+                    color: slides[currentSlide].line2ColorHex,
+                  }}
                 >
                   {slides[currentSlide].highlight}
                 </span>
@@ -263,7 +349,10 @@ const ModernSlider = () => {
               {slides[currentSlide].subtitle ? (
                 <span
                   className={`block ${slides[currentSlide].color2} drop-shadow-md animate-fade-in-up`}
-                  style={{ animationDelay: "0.4s" }}
+                  style={{
+                    animationDelay: "0.4s",
+                    color: slides[currentSlide].line3ColorHex,
+                  }}
                 >
                   {slides[currentSlide].subtitle}
                 </span>
@@ -277,19 +366,42 @@ const ModernSlider = () => {
             </p>
           </div>
 
-          {/* Botões de acção amigáveis */}
-          <div className="flex flex-col sm:flex-row gap-4 animate-fade-in-up" style={{animationDelay: '0.8s'}}>
-            <Link to="/contato" className="group px-8 py-4 bg-gradient-to-r from-pink-400 to-purple-500 text-white font-semibold text-lg rounded-full hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl inline-flex items-center justify-center">
-              <Heart className="mr-2 h-5 w-5 group-hover:animate-pulse" fill="currentColor" />
-              {ctaPrimary}
-              <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
-            </Link>
-            
-            <Link to="/servicos" className="group px-8 py-4 bg-white/90 text-gray-700 font-semibold text-lg rounded-full border-2 border-green-300 hover:bg-green-50 hover:border-green-400 transition-all duration-300 hover:scale-105 shadow-lg inline-flex items-center justify-center">
-              <Star className="mr-2 h-5 w-5 group-hover:text-yellow-500 transition-colors duration-300" fill="currentColor" />
-              Conhecer Serviços
-            </Link>
-          </div>
+          {/* Botões de acção (editáveis no Conteúdo do site) */}
+          {buttons.length > 0 ? (
+            <div
+              className="flex flex-col sm:flex-row gap-4 animate-fade-in-up"
+              style={{ animationDelay: "0.8s" }}
+            >
+              {buttons.map((btn) =>
+                btn.style === "primary" ? (
+                  <Link
+                    key={btn.id}
+                    to={btn.href || "/"}
+                    className="group px-8 py-4 bg-gradient-to-r from-pink-400 to-purple-500 text-white font-semibold text-lg rounded-full hover:scale-105 transition-all duration-300 shadow-lg hover:shadow-xl inline-flex items-center justify-center"
+                  >
+                    <Heart
+                      className="mr-2 h-5 w-5 group-hover:animate-pulse"
+                      fill="currentColor"
+                    />
+                    {btn.label}
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-300" />
+                  </Link>
+                ) : (
+                  <Link
+                    key={btn.id}
+                    to={btn.href || "/"}
+                    className="group px-8 py-4 bg-white/90 text-gray-700 font-semibold text-lg rounded-full border-2 border-green-300 hover:bg-green-50 hover:border-green-400 transition-all duration-300 hover:scale-105 shadow-lg inline-flex items-center justify-center"
+                  >
+                    <Star
+                      className="mr-2 h-5 w-5 group-hover:text-yellow-500 transition-colors duration-300"
+                      fill="currentColor"
+                    />
+                    {btn.label}
+                  </Link>
+                ),
+              )}
+            </div>
+          ) : null}
         </div>
       </div>
 

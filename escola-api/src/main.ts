@@ -52,6 +52,9 @@ async function bootstrap() {
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
+  // cPanel/Apache/Passenger: X-Forwarded-* (HTTPS, IP real) para cookies Secure e throttling
+  app.set('trust proxy', 1);
+
   const origins = (process.env.CORS_ORIGIN || 'http://localhost:8080')
     .split(',')
     .map((o) => o.trim())
@@ -109,11 +112,13 @@ async function bootstrap() {
     SwaggerModule.setup('docs', app, SwaggerModule.createDocument(app, swagger));
   }
 
+  // cPanel Node App define PORT; bind em 0.0.0.0 para o proxy Apache/Passenger
   const port = Number(process.env.PORT || 3001);
-  await app.listen(port);
-  console.log(`BetterYou Kids API em http://localhost:${port}/api`);
+  const host = process.env.HOST || '0.0.0.0';
+  await app.listen(port, host);
+  console.log(`BetterYou Kids API em http://${host}:${port}/api`);
   if (swaggerEnabled()) {
-    console.log(`Swagger em http://localhost:${port}/docs`);
+    console.log(`Swagger em http://${host}:${port}/docs`);
   } else {
     console.log('Swagger desactivado (produção ou SWAGGER_ENABLED=false)');
   }

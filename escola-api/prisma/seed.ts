@@ -8,6 +8,11 @@ import {
   FeeProgram,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import {
+  SEED_ACTIVITY_CARDS,
+  SEED_JORNADA_ITEMS,
+  SEED_SERVICE_CARDS,
+} from '../src/cms/site-content-defaults';
 
 const prisma = new PrismaClient();
 
@@ -845,6 +850,66 @@ async function main() {
       },
     ],
   });
+
+  // Páginas CMS: Nossa Jornada + Serviços (publicadas)
+  for (const pageDef of [
+    {
+      slug: 'sobre',
+      title: 'Sobre / Nossa Jornada',
+      key: 'jornada_items',
+      label: 'Marcos da jornada',
+      value: JSON.stringify(SEED_JORNADA_ITEMS),
+    },
+    {
+      slug: 'servicos',
+      title: 'Serviços',
+      key: 'service_cards',
+      label: 'Cartões de serviços',
+      value: JSON.stringify(SEED_SERVICE_CARDS),
+    },
+    {
+      slug: 'actividades',
+      title: 'Actividades Extracurriculares',
+      key: 'activity_cards',
+      label: 'Actividades do site',
+      value: JSON.stringify(SEED_ACTIVITY_CARDS),
+    },
+  ] as const) {
+    await prisma.contentPage.upsert({
+      where: { slug: pageDef.slug },
+      update: {
+        title: pageDef.title,
+        status: ContentStatus.PUBLICADO,
+        publishedAt: new Date(),
+      },
+      create: {
+        slug: pageDef.slug,
+        title: pageDef.title,
+        status: ContentStatus.PUBLICADO,
+        authorId: admin.id,
+        publishedAt: new Date(),
+      },
+    });
+    const page = await prisma.contentPage.findUnique({
+      where: { slug: pageDef.slug },
+    });
+    if (page) {
+      await prisma.contentSection.upsert({
+        where: { pageId_key: { pageId: page.id, key: pageDef.key } },
+        create: {
+          pageId: page.id,
+          key: pageDef.key,
+          label: pageDef.label,
+          value: pageDef.value,
+          sortOrder: 0,
+        },
+        update: {
+          label: pageDef.label,
+          value: pageDef.value,
+        },
+      });
+    }
+  }
 
   // Álbuns de galeria (categorias) — criados como rascunho para a Comunicação
   // preencher com imagens. O site público mantém o fallback até publicarem.

@@ -13,6 +13,7 @@ import {
   CalendarIcon,
   Check,
   CheckCircle2,
+  ChevronDown,
   ChevronRight,
   ClipboardCheck,
   ClipboardList,
@@ -402,20 +403,6 @@ function hasPortalAccess(modules: string[], role: string) {
   return modules.includes("portal") || role === "ENCARREGADO";
 }
 
-function navItemsFor(modules: string[], loggedIn: boolean, role = "") {
-  if (!loggedIn) {
-    return nav.filter((item) =>
-      ["inscricoes", "renovacoes", "emprego"].includes(item.id),
-    );
-  }
-  return nav.filter((item) => {
-    if (item.id === "portal") return hasPortalAccess(modules, role);
-    if (item.id === "ficha") return hasFichaAccess(modules, role);
-    if (item.id === "formularios") return canAccessFormularios(modules, role);
-    return modules.includes(item.id);
-  });
-}
-
 function canAccessView(
   view: View,
   modules: string[],
@@ -431,34 +418,155 @@ function canAccessView(
   return modules.includes(view);
 }
 
-const nav = [
-  { id: "dashboard" as View, label: "Visão geral", icon: BarChart3 },
-  { id: "painel" as View, label: "Painel executivo", icon: Activity },
-  { id: "portal" as View, label: "Portal do encarregado", icon: School },
-  { id: "inscricoes" as View, label: "Inscrições", icon: ClipboardList },
-  { id: "renovacoes" as View, label: "Renovações", icon: RefreshCw },
-  { id: "formularios" as View, label: "Formulários", icon: FileText },
-  { id: "ficha" as View, label: "Ficha do aluno", icon: FileUser },
-  { id: "espera" as View, label: "Lista de espera", icon: Users },
-  { id: "salas" as View, label: "Salas", icon: DoorOpen },
-  { id: "turmas" as View, label: "Turmas", icon: Users },
-  { id: "presencas" as View, label: "Presenças", icon: ClipboardCheck },
-  { id: "academico" as View, label: "Académico", icon: GraduationCap },
-  { id: "curriculo" as View, label: "Currículo", icon: BookOpen },
-  { id: "nee" as View, label: "NEE / PEI", icon: HeartHandshake },
-  { id: "reunioes" as View, label: "Reuniões e actas", icon: CalendarDays },
-  { id: "comunicados" as View, label: "Comunicados", icon: Megaphone },
-  { id: "eventos" as View, label: "Eventos e festas", icon: PartyPopper },
-  { id: "financeiro" as View, label: "Financeiro", icon: Wallet },
-  { id: "relatorios" as View, label: "Relatórios", icon: FileSpreadsheet },
-  { id: "actividades" as View, label: "Actividades", icon: Sparkles },
-  { id: "emprego" as View, label: "Vagas de emprego", icon: Briefcase },
-  { id: "conteudo" as View, label: "Conteúdo do site", icon: FileText },
-  { id: "unidades" as View, label: "Unidades", icon: Building2 },
-  { id: "auditoria" as View, label: "Auditoria", icon: History },
-  { id: "backups" as View, label: "Cópias de segurança", icon: Database },
-  { id: "acessos" as View, label: "Utilizadores e acessos", icon: Shield },
+type NavIcon = typeof BarChart3;
+
+type NavLeaf = {
+  id: View;
+  label: string;
+  icon: NavIcon;
+};
+
+type NavGroup = {
+  id: string;
+  label: string;
+  icon: NavIcon;
+  children: NavLeaf[];
+};
+
+type NavEntry = NavLeaf | NavGroup;
+
+function isNavGroup(entry: NavEntry): entry is NavGroup {
+  return "children" in entry && Array.isArray(entry.children);
+}
+
+/** Menu agrupado — poucos itens de topo, resto em submenus. */
+const navTree: NavEntry[] = [
+  {
+    id: "grupo-inicio",
+    label: "Início",
+    icon: BarChart3,
+    children: [
+      { id: "dashboard", label: "Visão geral", icon: BarChart3 },
+      { id: "painel", label: "Painel executivo", icon: Activity },
+    ],
+  },
+  { id: "portal", label: "Portal do encarregado", icon: School },
+  {
+    id: "grupo-admissoes",
+    label: "Admissões",
+    icon: ClipboardList,
+    children: [
+      { id: "inscricoes", label: "Matrículas", icon: ClipboardList },
+      { id: "renovacoes", label: "Renovações", icon: RefreshCw },
+      { id: "espera", label: "Lista de espera", icon: Users },
+      { id: "formularios", label: "Formulários", icon: FileText },
+    ],
+  },
+  { id: "ficha", label: "Ficha do aluno", icon: FileUser },
+  {
+    id: "grupo-escola",
+    label: "Escola",
+    icon: DoorOpen,
+    children: [
+      { id: "salas", label: "Salas", icon: DoorOpen },
+      { id: "turmas", label: "Turmas", icon: Users },
+      { id: "presencas", label: "Presenças", icon: ClipboardCheck },
+      { id: "actividades", label: "Actividades", icon: Sparkles },
+    ],
+  },
+  {
+    id: "grupo-pedagogico",
+    label: "Pedagógico",
+    icon: GraduationCap,
+    children: [
+      { id: "academico", label: "Académico", icon: GraduationCap },
+      { id: "curriculo", label: "Currículo", icon: BookOpen },
+      { id: "nee", label: "NEE / PEI", icon: HeartHandshake },
+      { id: "reunioes", label: "Reuniões e actas", icon: CalendarDays },
+    ],
+  },
+  {
+    id: "grupo-comunicacao",
+    label: "Comunicação",
+    icon: Megaphone,
+    children: [
+      { id: "comunicados", label: "Comunicados", icon: Megaphone },
+      { id: "eventos", label: "Eventos e festas", icon: PartyPopper },
+      { id: "conteudo", label: "Conteúdo do site", icon: FileText },
+      { id: "emprego", label: "Vagas de emprego", icon: Briefcase },
+    ],
+  },
+  {
+    id: "grupo-financeiro",
+    label: "Financeiro",
+    icon: Wallet,
+    children: [
+      { id: "financeiro", label: "Gestão financeira", icon: Wallet },
+      { id: "relatorios", label: "Relatórios", icon: FileSpreadsheet },
+    ],
+  },
+  {
+    id: "grupo-admin",
+    label: "Administração",
+    icon: Shield,
+    children: [
+      { id: "unidades", label: "Unidades", icon: Building2 },
+      { id: "acessos", label: "Utilizadores e acessos", icon: Shield },
+      { id: "auditoria", label: "Auditoria", icon: History },
+      { id: "backups", label: "Cópias de segurança", icon: Database },
+    ],
+  },
 ];
+
+function flattenNavLeaves(entries: NavEntry[]): NavLeaf[] {
+  return entries.flatMap((entry) =>
+    isNavGroup(entry) ? entry.children : [entry],
+  );
+}
+
+function canAccessNavLeaf(
+  leaf: NavLeaf,
+  modules: string[],
+  loggedIn: boolean,
+  role: string,
+) {
+  if (!loggedIn) {
+    return ["inscricoes", "renovacoes", "emprego"].includes(leaf.id);
+  }
+  if (leaf.id === "portal") return hasPortalAccess(modules, role);
+  if (leaf.id === "ficha") return hasFichaAccess(modules, role);
+  if (leaf.id === "formularios") return canAccessFormularios(modules, role);
+  return modules.includes(leaf.id);
+}
+
+function navItemsFor(
+  modules: string[],
+  loggedIn: boolean,
+  role = "",
+): NavEntry[] {
+  const result: NavEntry[] = [];
+  for (const entry of navTree) {
+    if (isNavGroup(entry)) {
+      const children = entry.children.filter((leaf) =>
+        canAccessNavLeaf(leaf, modules, loggedIn, role),
+      );
+      if (children.length === 0) continue;
+      result.push({ ...entry, children });
+    } else if (canAccessNavLeaf(entry, modules, loggedIn, role)) {
+      result.push(entry);
+    }
+  }
+  return result;
+}
+
+function groupIdForView(view: View, entries: NavEntry[]): string | null {
+  for (const entry of entries) {
+    if (isNavGroup(entry) && entry.children.some((c) => c.id === view)) {
+      return entry.id;
+    }
+  }
+  return null;
+}
 
 export function BirthDateField({
   value,
@@ -600,6 +708,9 @@ export default function Platform({
     return "inscricoes";
   });
   const [mobileMenu, setMobileMenu] = useState(false);
+  const [openNavGroups, setOpenNavGroups] = useState<Record<string, boolean>>(
+    {},
+  );
   const [loginMode, setLoginMode] = useState<"login" | "register">("login");
   const [units, setUnits] = useState<Unit[]>([]);
   const [unit, setUnit] = useState("Gika");
@@ -691,7 +802,7 @@ export default function Platform({
         (hasPortalAccess(modules, userRole)
           ? ("portal" as View)
           : undefined) ||
-        (nav.find((item) => {
+        (flattenNavLeaves(navTree).find((item) => {
           if (item.id === "portal") return hasPortalAccess(modules, userRole);
           if (item.id === "ficha") return hasFichaAccess(modules, userRole);
           if (item.id === "formularios")
@@ -852,8 +963,9 @@ export default function Platform({
         ? "portal"
         : userModules.includes("ficha") || role === "ENCARREGADO"
           ? "ficha"
-          : (nav.find((item) => userModules.includes(item.id))?.id as View) ||
-            "inscricoes";
+          : (flattenNavLeaves(navTree).find((item) =>
+              userModules.includes(item.id),
+            )?.id as View) || "inscricoes";
 
     setToken("1");
     setUserName(result.user.name);
@@ -874,6 +986,19 @@ export default function Platform({
   };
 
   const visibleNav = navItemsFor(modules, !!token, userRole);
+
+  useEffect(() => {
+    const entries = navItemsFor(modules, !!token, userRole);
+    const groupId = groupIdForView(view, entries);
+    if (!groupId) return;
+    setOpenNavGroups((prev) =>
+      prev[groupId] ? prev : { ...prev, [groupId]: true },
+    );
+  }, [view, modules, token, userRole]);
+
+  const toggleNavGroup = (groupId: string) => {
+    setOpenNavGroups((prev) => ({ ...prev, [groupId]: !prev[groupId] }));
+  };
 
   return (
     <div className="min-h-screen bg-[#faf8fc] text-slate-800">
@@ -903,7 +1028,7 @@ export default function Platform({
               <p className="text-muted-foreground">
                 {token
                   ? userRole || "Utilizador"
-                  : "Acesso público a inscrições, renovações e emprego"}
+                  : "Acesso público a matrículas, renovações e emprego"}
               </p>
             </div>
             {!token ? (
@@ -939,20 +1064,73 @@ export default function Platform({
           className={`${mobileMenu ? "block" : "hidden"} fixed inset-x-0 top-20 z-10 border-b bg-white p-4 shadow-lg md:static md:block md:min-h-[calc(100vh-5rem)] md:w-60 md:border-b-0 md:border-r md:p-5 md:shadow-none`}
         >
           <nav className="space-y-1">
-            {visibleNav.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                onClick={() => goTo(id)}
-                className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm font-medium transition ${
-                  view === id
-                    ? "bg-primary text-white shadow"
-                    : "text-slate-600 hover:bg-primary/10 hover:text-primary"
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                {label}
-              </button>
-            ))}
+            {visibleNav.map((entry) => {
+              if (isNavGroup(entry)) {
+                const open = !!openNavGroups[entry.id];
+                const GroupIcon = entry.icon;
+                const childActive = entry.children.some((c) => c.id === view);
+                return (
+                  <div key={entry.id} className="space-y-0.5">
+                    <button
+                      type="button"
+                      onClick={() => toggleNavGroup(entry.id)}
+                      className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm font-medium transition ${
+                        childActive
+                          ? "bg-primary/15 text-primary"
+                          : "text-slate-600 hover:bg-primary/10 hover:text-primary"
+                      }`}
+                      aria-expanded={open}
+                    >
+                      <GroupIcon className="h-5 w-5 shrink-0" />
+                      <span className="min-w-0 flex-1">{entry.label}</span>
+                      {open ? (
+                        <ChevronDown className="h-4 w-4 shrink-0 opacity-70" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 shrink-0 opacity-70" />
+                      )}
+                    </button>
+                    {open && (
+                      <div className="ml-3 space-y-0.5 border-l border-slate-200 pl-2">
+                        {entry.children.map(
+                          ({ id, label, icon: ChildIcon }) => (
+                            <button
+                              key={id}
+                              type="button"
+                              onClick={() => goTo(id)}
+                              className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
+                                view === id
+                                  ? "bg-primary text-white shadow"
+                                  : "text-slate-600 hover:bg-primary/10 hover:text-primary"
+                              }`}
+                            >
+                              <ChildIcon className="h-4 w-4 shrink-0" />
+                              {label}
+                            </button>
+                          ),
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              }
+
+              const { id, label, icon: Icon } = entry;
+              return (
+                <button
+                  key={id}
+                  type="button"
+                  onClick={() => goTo(id)}
+                  className={`flex w-full items-center gap-3 rounded-lg px-3 py-3 text-left text-sm font-medium transition ${
+                    view === id
+                      ? "bg-primary text-white shadow"
+                      : "text-slate-600 hover:bg-primary/10 hover:text-primary"
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                  {label}
+                </button>
+              );
+            })}
           </nav>
           <div className="mt-7 border-t pt-5">
             <Link
@@ -1422,7 +1600,7 @@ function Dashboard({
         </div>
         <Button onClick={onEnroll} className="bg-primary hover:bg-primary/90">
           <Plus className="mr-2 h-4 w-4" />
-          Nova inscrição
+          Nova matrícula
         </Button>
       </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -1754,7 +1932,7 @@ function Enrollment({
     <div className="mx-auto max-w-4xl">
       <div className="mb-7">
         <p className="mb-2 text-sm font-medium text-secondary">ADMISSÕES</p>
-        <h1 className="text-3xl font-bold">Nova inscrição</h1>
+        <h1 className="text-3xl font-bold">Nova matrícula</h1>
         <p className="mt-2 text-muted-foreground">
           Preencha todos os dados. Sem salas disponíveis, a inscrição entra
           automaticamente na lista de espera.
@@ -2726,7 +2904,7 @@ function InscricoesGestao() {
     <div>
       <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
         <div>
-          <h2 className="text-xl font-semibold">Gestão de inscrições</h2>
+          <h2 className="text-xl font-semibold">Gestão de matrículas</h2>
           <p className="text-sm text-muted-foreground">
             Confirme, rejeite ou remova candidaturas recebidas.
           </p>

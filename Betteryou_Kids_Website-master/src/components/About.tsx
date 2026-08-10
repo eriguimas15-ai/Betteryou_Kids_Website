@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -7,10 +8,47 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { Target, Eye, Heart, Users, Award, Globe, Baby, GraduationCap, Clock, Calendar, MapPin, Trophy, Sparkles, ArrowRight, Gift } from "lucide-react";
+import { Target, Eye, Heart, Users, Award, Globe, Calendar, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { getPublicCmsPage } from "@/lib/api";
+import { cmsIcon } from "@/lib/cms-icons";
+import {
+  CMS_JORNADA_SECTION,
+  CMS_JORNADA_SLUG,
+  CMS_SERVICOS_SECTION,
+  CMS_SERVICOS_SLUG,
+  DEFAULT_CMS_JOURNEY,
+  DEFAULT_CMS_SERVICES,
+  parseJourneyJson,
+  parseServicesJson,
+  sectionValue,
+  type CmsJourneyItem,
+  type CmsServiceCard,
+} from "@/lib/site-content-cms";
 
 const About = () => {
+  const [timeline, setTimeline] = useState<CmsJourneyItem[]>(DEFAULT_CMS_JOURNEY);
+  const [serviceCards, setServiceCards] = useState<CmsServiceCard[]>(
+    DEFAULT_CMS_SERVICES,
+  );
+
+  useEffect(() => {
+    getPublicCmsPage(CMS_JORNADA_SLUG)
+      .then((page) => {
+        const parsed = parseJourneyJson(sectionValue(page, CMS_JORNADA_SECTION));
+        if (parsed?.length) setTimeline(parsed);
+      })
+      .catch(() => undefined);
+    getPublicCmsPage(CMS_SERVICOS_SLUG)
+      .then((page) => {
+        const parsed = parseServicesJson(
+          sectionValue(page, CMS_SERVICOS_SECTION),
+        );
+        if (parsed?.length) setServiceCards(parsed);
+      })
+      .catch(() => undefined);
+  }, []);
+
   const values = [
     {
       icon: Heart,
@@ -38,58 +76,14 @@ const About = () => {
     }
   ];
 
-  const services = [
-    {
-      icon: Baby,
-      title: "Creche",
-      age: "1-3 anos",
-      description: "Cuidados especializados para os primeiros anos",
-      color: "pink"
-    },
-    {
-      icon: Users,
-      title: "Pré-Escolar", 
-      age: "3-5 anos",
-      description: "Desenvolvimento cognitivo e social",
-      color: "secondary"
-    },
-    {
-      icon: GraduationCap,
-      title: "Jardim de Infância",
-      age: "5-6 anos", 
-      description: "Preparação para o ensino fundamental",
-      color: "green"
-    },
-    {
-      icon: GraduationCap,
-      title: "1º Ciclo",
-      age: "6-10 anos",
-      description: "Apoio escolar completo com reforço pedagógico e actividades criativas",
-      color: "accent"
-    },
-    {
-      icon: Clock,
-      title: "ATL",
-      age: "3-10 anos",
-      description: "Actividades complementares que ampliam a aprendizagem e o convívio social",
-      color: "purple"
-    },
-    {
-      icon: Gift,
-      title: "Festas e Eventos Infantis",
-      age: "3-10 anos",
-      description: "Celebrações e eventos com estrutura completa para crianças e famílias",
-      color: "red"
-    }
-  ];
-
   const serviceColorClasses = {
     pink: { iconBg: "bg-pink/10", iconText: "text-pink", ageText: "text-pink" },
     secondary: { iconBg: "bg-secondary/10", iconText: "text-secondary", ageText: "text-secondary" },
     green: { iconBg: "bg-green/10", iconText: "text-green", ageText: "text-green" },
     accent: { iconBg: "bg-accent/10", iconText: "text-accent", ageText: "text-accent" },
     purple: { iconBg: "bg-purple/10", iconText: "text-purple", ageText: "text-purple" },
-    red: { iconBg: "bg-red/10", iconText: "text-red", ageText: "text-red" }
+    red: { iconBg: "bg-red/10", iconText: "text-red", ageText: "text-red" },
+    blue: { iconBg: "bg-blue/10", iconText: "text-blue", ageText: "text-blue" },
   } as const;
 
   const timelineColorClasses = {
@@ -97,60 +91,10 @@ const About = () => {
     blue: { bg: "bg-blue/10", text: "text-blue" },
     green: { bg: "bg-green/10", text: "text-green" },
     secondary: { bg: "bg-secondary/10", text: "text-secondary" },
-    accent: { bg: "bg-accent/10", text: "text-accent" }
+    accent: { bg: "bg-accent/10", text: "text-accent" },
+    purple: { bg: "bg-purple/10", text: "text-purple" },
+    red: { bg: "bg-red/10", text: "text-red" },
   } as const;
-
-  const timeline = [
-    {
-      year: "2021",
-      title: "Fundação",
-      description: "Nascimento da Betteryou Kids com o sonho de revolucionar a educação infantil",
-      icon: Sparkles,
-      color: "pink"
-    },
-    {
-      year: "2021",
-      title: "Primeira Unidade",
-      description: "Abertura da primeira unidade com metodologia inovadora",
-      icon: MapPin,
-      color: "blue"
-    },
-    {
-      year: "2023",
-      title: "Expansão",
-      description: "Crescimento da comunidade e ampliação das actividades",
-      icon: Users,
-      color: "green"
-    },
-    {
-      year: "2024",
-      title: "Reconhecimento",
-      description: "Considerada pelos pais como melhor instituição de educação infantil",
-      icon: Trophy,
-      color: "accent"
-    },
-    {
-      year: "2025",
-      title: "Abertura do Novo Espaço",
-      description: "Inauguração do novo espaço da Betteryou Kids em 1 de Setembro de 2025, ampliando o atendimento e actividades.",
-      icon: MapPin,
-      color: "blue"
-    },
-    {
-      year: "2025",
-      title: "Segunda Unidade",
-      description: "Abertura da segunda unidade após a mudança para o novo espaço, aumentando a capacidade de atendimento.",
-      icon: MapPin,
-      color: "secondary"
-    },
-    {
-      year: "2026",
-      title: "Abertura do 1º Ciclo",
-      description: "Início das actividades do 1º Ciclo a partir de 14 de Setembro de 2026, com projecto pedagógico expandido.",
-      icon: GraduationCap,
-      color: "secondary"
-    }
-  ];
 
   const activities = [
     { title: "Música e Movimento", description: "Desenvolvimento rítmico e expressão corporal" },
@@ -289,15 +233,19 @@ const About = () => {
             
             <div className="space-y-12">
               {timeline.map((item, index) => {
-                const timelineStyle = timelineColorClasses[item.color as keyof typeof timelineColorClasses];
+                const timelineStyle =
+                  timelineColorClasses[
+                    item.color as keyof typeof timelineColorClasses
+                  ] || timelineColorClasses.pink;
+                const Icon = cmsIcon(item.icon);
                 return (
-                  <div key={index} className={`flex items-center ${index % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
+                  <div key={item.id} className={`flex items-center ${index % 2 === 0 ? 'justify-start' : 'justify-end'}`}>
                     <div className={`w-1/2 ${index % 2 === 0 ? 'pr-8 text-right' : 'pl-8 text-left'}`}>
                       <Card className="shadow-soft hover:shadow-colorful transition-all duration-300 group">
                         <CardContent className="p-6">
                           <div className={`flex items-center gap-3 mb-3 ${index % 2 === 0 ? 'justify-end' : 'justify-start'}`}>
                             <div className={`${timelineStyle.bg} p-2 rounded-full`}>
-                              <item.icon className={`h-5 w-5 ${timelineStyle.text}`} />
+                              <Icon className={`h-5 w-5 ${timelineStyle.text}`} />
                             </div>
                             <span className={`text-2xl font-bold ${timelineStyle.text}`}>{item.year}</span>
                           </div>
@@ -324,19 +272,23 @@ const About = () => {
 
           <Carousel className="max-w-4xl mx-auto">
             <CarouselContent>
-              {services.map((service, index) => {
-                const serviceStyle = serviceColorClasses[service.color as keyof typeof serviceColorClasses];
+              {serviceCards.map((service) => {
+                const serviceStyle =
+                  serviceColorClasses[
+                    service.color as keyof typeof serviceColorClasses
+                  ] || serviceColorClasses.pink;
+                const Icon = cmsIcon(service.icon);
                 return (
-                  <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
+                  <CarouselItem key={service.id} className="md:basis-1/2 lg:basis-1/3">
                     <Card className="shadow-soft hover:shadow-colorful transition-all duration-300 group h-full">
                       <CardContent className="p-6 text-center h-full flex flex-col">
                         <div className="mb-4 flex justify-center">
                           <div className={`${serviceStyle.iconBg} p-3 rounded-full group-hover:scale-110 transition-transform duration-300`}>
-                            <service.icon className={`h-8 w-8 ${serviceStyle.iconText}`} />
+                            <Icon className={`h-8 w-8 ${serviceStyle.iconText}`} />
                           </div>
                         </div>
                         <h4 className="text-xl font-semibold text-primary mb-2">{service.title}</h4>
-                        <p className={`${serviceStyle.ageText} font-medium mb-3`}>{service.age}</p>
+                        <p className={`${serviceStyle.ageText} font-medium mb-3`}>{service.ageRange}</p>
                         <p className="text-sm text-muted-foreground flex-grow">{service.description}</p>
                         <Button 
                           asChild
